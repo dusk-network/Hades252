@@ -58,6 +58,9 @@ mod test {
     use super::*;
     use hex::*;
 
+    extern crate test;
+    use test::Bencher;
+
     #[test]
     fn test_hash_reset() {
         let mut h = Hash::new();
@@ -78,6 +81,45 @@ mod test {
             "0d36d39f735454d48fa44e68297b2ade3ad3ad06246ebdde0aa1fe554666780f",
             hex::encode(digest)
         );
+    }
+
+    #[bench]
+    fn bench_hash2_1(b: &mut Bencher) {
+        let mut h = Hash::new();
+        h.input_bytes(b"hello").unwrap();
+        h.input_bytes(b"world").unwrap();
+
+        b.iter(|| h.result().unwrap());
+    }
+    #[bench]
+    fn bench_hash3_1(b: &mut Bencher) {
+        let mut h = Hash::new();
+        h.input_bytes(b"a").unwrap();
+        h.input_bytes(b"b").unwrap();
+        h.input_bytes(b"c").unwrap();
+
+        b.iter(|| h.result().unwrap());
+    }
+    #[bench]
+    fn bench_hash4_1(b: &mut Bencher) {
+        let mut h = Hash::new();
+        h.input_bytes(b"a").unwrap();
+        h.input_bytes(b"b").unwrap();
+        h.input_bytes(b"c").unwrap();
+        h.input_bytes(b"d").unwrap();
+
+        b.iter(|| h.result().unwrap());
+    }
+    #[bench]
+    fn bench_hash5_1(b: &mut Bencher) {
+        let mut h = Hash::new();
+        h.input_bytes(b"a").unwrap();
+        h.input_bytes(b"b").unwrap();
+        h.input_bytes(b"c").unwrap();
+        h.input_bytes(b"d").unwrap();
+        h.input_bytes(b"e").unwrap();
+
+        b.iter(|| h.result().unwrap());
     }
 
 }

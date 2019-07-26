@@ -1,3 +1,5 @@
+#![feature(test)]
+
 mod errors;
 pub mod hash;
 mod mds_matrix;
