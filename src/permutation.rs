@@ -87,8 +87,9 @@ impl Permutation {
     fn add_round_key(
         &self,
         constants: &mut RoundConstantsIterator,
+        words : Vec<Scalar>,
     ) -> Result<Vec<Scalar>, PermError> {
-        self.data
+        words
             .iter()
             .map(|word| {
                 let c = constants.next().ok_or(PermError::NoMoreConstants)?;
@@ -99,9 +100,10 @@ impl Permutation {
     fn apply_full_round(
         &self,
         constants: &mut RoundConstantsIterator,
+        words : Vec<Scalar>,
     ) -> Result<Vec<Scalar>, PermError> {
         // Add round keys to each word
-        let new_words = self.add_round_key(constants)?;
+        let new_words = self.add_round_key(constants, words)?;
 
         // Then apply inverse s-box by inverting the result
         let inverted_words: Result<Vec<Scalar>, PermError> = new_words
@@ -120,9 +122,10 @@ impl Permutation {
     fn apply_partial_round(
         &self,
         constants: &mut RoundConstantsIterator,
+        words : Vec<Scalar>,
     ) -> Result<Vec<Scalar>, PermError> {
         // Add round keys to each word
-        let mut new_words = self.add_round_key(constants)?;
+        let mut new_words = self.add_round_key(constants, words)?;
         // Then apply inversion s-box to first element
         if new_words[0] == Scalar::zero() {
             return Err(PermError::NonInvertible);
@@ -135,21 +138,21 @@ impl Permutation {
     pub fn result(&self) -> Result<Vec<Scalar>, PermError> {
         let mut constants_iter = self.constants.iter();
 
-        let mut new_words: Vec<Scalar> = Vec::with_capacity(self.t);
+        let mut new_words: Vec<Scalar> = self.data.clone();
 
         // Apply R_f full rounds
         for _ in 0..self.full_rounds / 2 {
-            new_words = self.apply_full_round(&mut constants_iter)?;
+            new_words = self.apply_full_round(&mut constants_iter, new_words)?;
         }
 
         // Apply R_P partial rounds
         for _ in 0..self.partial_rounds {
-            new_words = self.apply_partial_round(&mut constants_iter)?;
+            new_words = self.apply_partial_round(&mut constants_iter, new_words)?;
         }
 
         // Apply R_f full rounds
         for _ in 0..self.full_rounds / 2 {
-            new_words = self.apply_full_round(&mut constants_iter)?;
+            new_words = self.apply_full_round(&mut constants_iter, new_words)?;
         }
 
         Ok(new_words)

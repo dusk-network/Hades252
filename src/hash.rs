@@ -53,6 +53,7 @@ impl Hash {
         }
     }
 }
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -68,7 +69,7 @@ mod test {
         h.input_bytes(b"world").unwrap();
         let digest = h.result().unwrap();
         assert_eq!(
-            "0d36d39f735454d48fa44e68297b2ade3ad3ad06246ebdde0aa1fe554666780f",
+            "663f16b5422aa2ef42ff5f8e5951f7cd43a32f353e437666ec5fd7befccd2d08",
             hex::encode(digest)
         );
 
@@ -78,7 +79,7 @@ mod test {
         h.input_bytes(b"world").unwrap();
         let digest = h.result().unwrap();
         assert_eq!(
-            "0d36d39f735454d48fa44e68297b2ade3ad3ad06246ebdde0aa1fe554666780f",
+            "663f16b5422aa2ef42ff5f8e5951f7cd43a32f353e437666ec5fd7befccd2d08",
             hex::encode(digest)
         );
     }
@@ -121,5 +122,4 @@ mod test {
 
         b.iter(|| h.result().unwrap());
     }
-
 }
