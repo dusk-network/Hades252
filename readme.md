@@ -10,13 +10,15 @@ Implementation of Hades252 over the Ristretto Scalar field.
 
 - Security level is 126 bits
 
-- width = 6
+- width = 9
 
 - Number of full rounds = 8 . There are four full rounds at the beginning and four full rounds at the end
 
-- Number of partial rounds = 127, where each partial round has one inversion s-box.
+- Merkle tree arity : 8 to 1
 
-- Number of round constants = 810
+- Number of partial rounds = 59, where each partial round has one quintic s-box and (width-1) identity functions.
+
+- Number of round constants = 603
 
 ## Example
 ```
@@ -41,3 +43,7 @@ Implementation of Hades252 over the Ristretto Scalar field.
 ## Reference
 
 https://eprint.iacr.org/2019/458.pdf
+
+## TODO
+
+- Remove flag #[allow(dead_code)] once completed and check unused functions

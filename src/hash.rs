@@ -57,7 +57,7 @@ impl Hash {
 #[cfg(test)]
 mod test {
     use super::*;
-    use hex::*;
+    use hex::encode;
 
     extern crate test;
     use test::Bencher;
@@ -69,7 +69,7 @@ mod test {
         h.input_bytes(b"world").unwrap();
         let digest = h.result().unwrap();
         assert_eq!(
-            "663f16b5422aa2ef42ff5f8e5951f7cd43a32f353e437666ec5fd7befccd2d08",
+            "e98910b79237622425bd625846aadc37eb085acf6c49ea315a3a6ba7aab72f06",
             hex::encode(digest)
         );
 
@@ -79,7 +79,7 @@ mod test {
         h.input_bytes(b"world").unwrap();
         let digest = h.result().unwrap();
         assert_eq!(
-            "663f16b5422aa2ef42ff5f8e5951f7cd43a32f353e437666ec5fd7befccd2d08",
+            "e98910b79237622425bd625846aadc37eb085acf6c49ea315a3a6ba7aab72f06",
             hex::encode(digest)
         );
     }

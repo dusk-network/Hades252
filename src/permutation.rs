@@ -87,7 +87,7 @@ impl Permutation {
     fn add_round_key(
         &self,
         constants: &mut RoundConstantsIterator,
-        words : Vec<Scalar>,
+        words: Vec<Scalar>,
     ) -> Result<Vec<Scalar>, PermError> {
         words
             .iter()
@@ -100,37 +100,33 @@ impl Permutation {
     fn apply_full_round(
         &self,
         constants: &mut RoundConstantsIterator,
-        words : Vec<Scalar>,
+        words: Vec<Scalar>,
     ) -> Result<Vec<Scalar>, PermError> {
         // Add round keys to each word
         let new_words = self.add_round_key(constants, words)?;
 
-        // Then apply inverse s-box by inverting the result
-        let inverted_words: Result<Vec<Scalar>, PermError> = new_words
+        // Then apply quintic s-box
+        let quintic_words: Result<Vec<Scalar>, PermError> = new_words
             .iter()
-            .map(|word| {
-                if word == &Scalar::zero() {
-                    return Err(PermError::NonInvertible);
-                }
-                Ok(word.invert())
-            })
+            .map(|word| Ok(Permutation::quintic_s_box(word)))
             .collect();
 
         // Multiply this result by the MDS matrix
-        Ok(self.matrix.mul_vector(&inverted_words?))
+        Ok(self.matrix.mul_vector(&quintic_words?))
     }
+    fn quintic_s_box(scalar: &Scalar) -> Scalar {
+        scalar * scalar * scalar * scalar * scalar
+    }
+
     fn apply_partial_round(
         &self,
         constants: &mut RoundConstantsIterator,
-        words : Vec<Scalar>,
+        words: Vec<Scalar>,
     ) -> Result<Vec<Scalar>, PermError> {
         // Add round keys to each word
         let mut new_words = self.add_round_key(constants, words)?;
-        // Then apply inversion s-box to first element
-        if new_words[0] == Scalar::zero() {
-            return Err(PermError::NonInvertible);
-        }
-        new_words[0] = new_words[0].invert();
+        // Then apply quintic s-box to first element
+        new_words[0] = Permutation::quintic_s_box(&new_words[0]);
         // Multiply this result by the MDS matrix
         Ok(self.matrix.mul_vector(&new_words))
     }
