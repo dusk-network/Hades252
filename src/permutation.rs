@@ -17,9 +17,9 @@ pub struct Permutation {
 
 impl Default for Permutation {
     fn default() -> Self {
-        let width = 6;
+        let width = 9;
         let full_founds = 8;
-        let partial_rounds = 127;
+        let partial_rounds = 59;
         Permutation {
             t: width,
             full_rounds: full_founds,

@@ -43,7 +43,3 @@ Implementation of Hades252 over the Ristretto Scalar field.
 ## Reference
 
 https://eprint.iacr.org/2019/458.pdf
-
-## TODO
-
-- Remove flag #[allow(dead_code)] once completed and check unused functions
