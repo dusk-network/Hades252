@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 
+use bulletproofs::r1cs::LinearCombination;
 use curve25519_dalek::scalar::Scalar;
 
 pub struct MDSMatrix {
@@ -50,10 +51,33 @@ impl MDSMatrix {
     pub fn mul_vector(&self, b: &[Scalar]) -> Vec<Scalar> {
         self.matrix.iter().map(|row| dot_product(row, b)).collect()
     }
+
+    pub fn constrain_mul_vector(&self, b: Vec<LinearCombination>) -> Vec<LinearCombination> {
+        self.matrix
+            .iter()
+            .map(|row| constrain_dot_product(row, b.clone()))
+            .collect()
+    }
 }
 
 fn dot_product(a: &[Scalar], b: &[Scalar]) -> Scalar {
     a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
+}
+
+fn constrain_dot_product(a: &[Scalar], b: Vec<LinearCombination>) -> LinearCombination {
+    let l_cs: Vec<LinearCombination> = a
+        .iter()
+        .zip(b.iter())
+        .map(|(a_i, b_i)| a_i.clone() * b_i.clone())
+        .collect();
+
+    let mut sum: LinearCombination = Scalar::zero().into();
+
+    for l_c in l_cs {
+        sum = sum + l_c;
+    }
+
+    sum
 }
 
 mod test {
