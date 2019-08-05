@@ -33,9 +33,6 @@ impl Default for Permutation {
 
 impl Permutation {
     pub fn new(t: usize, full_rounds: usize, partial_rounds: usize) -> Result<Self, PermError> {
-        // We could ask for R_f instead of R_F then multiply by two.
-        // It would make for a better API, however would need to be documented correctly
-        // Because partial rounds means "everything", while full_rounds would mean "half of the full rounds"
         if full_rounds % 2 != 0 {
             return Err(PermError::FullRoundsOdd);
         }
