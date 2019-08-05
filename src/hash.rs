@@ -112,40 +112,11 @@ mod test {
     }
 
     #[bench]
-    fn bench_hash2_1(b: &mut Bencher) {
-        let mut h = Hash::new();
-        h.input_bytes(b"hello").unwrap();
-        h.input_bytes(b"world").unwrap();
-
-        b.iter(|| h.result().unwrap());
-    }
-    #[bench]
     fn bench_hash3_1(b: &mut Bencher) {
         let mut h = Hash::new();
         h.input_bytes(b"a").unwrap();
         h.input_bytes(b"b").unwrap();
         h.input_bytes(b"c").unwrap();
-
-        b.iter(|| h.result().unwrap());
-    }
-    #[bench]
-    fn bench_hash4_1(b: &mut Bencher) {
-        let mut h = Hash::new();
-        h.input_bytes(b"a").unwrap();
-        h.input_bytes(b"b").unwrap();
-        h.input_bytes(b"c").unwrap();
-        h.input_bytes(b"d").unwrap();
-
-        b.iter(|| h.result().unwrap());
-    }
-    #[bench]
-    fn bench_hash5_1(b: &mut Bencher) {
-        let mut h = Hash::new();
-        h.input_bytes(b"a").unwrap();
-        h.input_bytes(b"b").unwrap();
-        h.input_bytes(b"c").unwrap();
-        h.input_bytes(b"d").unwrap();
-        h.input_bytes(b"e").unwrap();
 
         b.iter(|| h.result().unwrap());
     }
