@@ -150,37 +150,3 @@ mod test {
         b.iter(|| h.result().unwrap());
     }
 }
-
-// fn range_proof_helper(v_val: u64, n: usize) -> Result<(), R1CSError> {
-//     // Common
-//     let pc_gens = PedersenGens::default();
-//     let bp_gens = BulletproofGens::new(128, 1);
-
-//     // Prover's scope
-//     let (proof, commitment) = {
-//         // Prover makes a `ConstraintSystem` instance representing a range proof gadget
-//         let mut prover_transcript = Transcript::new(b"RangeProofTest");
-//         let mut rng = rand::thread_rng();
-
-//         let mut prover = Prover::new(&pc_gens, &mut prover_transcript);
-
-//         let (com, var) = prover.commit(v_val.into(), Scalar::random(&mut rng));
-//         assert!(range_proof(&mut prover, var.into(), Some(v_val), n).is_ok());
-
-//         let proof = prover.prove(&bp_gens)?;
-
-//         (proof, com)
-//     };
-
-//     // Verifier makes a `ConstraintSystem` instance representing a merge gadget
-//     let mut verifier_transcript = Transcript::new(b"RangeProofTest");
-//     let mut verifier = Verifier::new(&mut verifier_transcript);
-
-//     let var = verifier.commit(commitment);
-
-//     // Verifier adds constraints to the constraint system
-//     assert!(range_proof(&mut verifier, var.into(), None, n).is_ok());
-
-//     // Verifier verifies proof
-//     Ok(verifier.verify(&proof, &pc_gens, &bp_gens)?)
-// }
