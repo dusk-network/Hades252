@@ -8,7 +8,7 @@ pub struct Hash {
 }
 
 impl Hash {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let mut p = Permutation::default();
 
         // First value is zero
