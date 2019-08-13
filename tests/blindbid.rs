@@ -3,7 +3,7 @@
 extern crate hades252;
 use hades252::hash::Hash;
 
-use bulletproofs::r1cs::{Prover, Verifier, ConstraintSystem};
+use bulletproofs::r1cs::{ConstraintSystem, Prover, Verifier};
 use bulletproofs::{BulletproofGens, PedersenGens};
 use curve25519_dalek::ristretto::CompressedRistretto;
 use merlin::Transcript;
@@ -13,7 +13,6 @@ use bulletproofs::r1cs::{LinearCombination, R1CSError, R1CSProof, Variable};
 use curve25519_dalek::scalar::Scalar;
 
 type ProofResult<T> = Result<T, R1CSError>;
-
 
 pub fn prove(
     d: Scalar,
