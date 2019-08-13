@@ -192,7 +192,7 @@ mod test {
             .unzip();
 
         // Convert variables into linear combinations
-        let lcs : Vec<LinearCombination> = vars.iter().map(|&x| x.into()).collect();
+        let lcs: Vec<LinearCombination> = vars.iter().map(|&x| x.into()).collect();
 
         // Build CS
         let results = h.result_gadget(lcs, &mut prover).unwrap();
@@ -227,7 +227,7 @@ mod test {
         let mut h = Hash::with_perm(perm);
 
         // Convert variables into linear combinations
-        let lcs : Vec<LinearCombination> = vars.iter().map(|&x| x.into()).collect();
+        let lcs: Vec<LinearCombination> = vars.iter().map(|&x| x.into()).collect();
 
         let result = h.result_gadget(lcs, &mut verifier).unwrap();
 
