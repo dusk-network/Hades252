@@ -10,9 +10,6 @@ use curve25519_dalek::ristretto::CompressedRistretto;
 use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
 
-extern crate test;
-use test::Bencher;
-
 #[test]
 fn main() {
     // Common Bulletproof Parameters
