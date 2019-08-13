@@ -4,7 +4,7 @@ extern crate hades252;
 use hades252::hash::Hash;
 use hades252::permutation::Permutation;
 
-use bulletproofs::r1cs::{Prover, R1CSProof, Verifier, LinearCombination, ConstraintSystem};
+use bulletproofs::r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Verifier};
 use bulletproofs::{BulletproofGens, PedersenGens};
 use curve25519_dalek::ristretto::CompressedRistretto;
 use curve25519_dalek::scalar::Scalar;
@@ -68,11 +68,14 @@ fn make_proof(
         .map(|input| prover.commit(*input, Scalar::random(&mut rng)))
         .unzip();
 
-    // Build CS
-    let result = h.result_gadget(vars, &mut prover).unwrap();
+    // Convert variables into linear combinations
+    let lcs: Vec<LinearCombination> = vars.iter().map(|&x| x.into()).collect();
 
-    // Add preimage gadget 
-    preimage_gadget(digest,result, &mut prover);
+    // Build CS
+    let result = h.result_gadget(lcs, &mut prover).unwrap();
+
+    // Add preimage gadget
+    preimage_gadget(digest, result, &mut prover);
 
     // Prove
     let proof = prover.prove(&bp_gens).unwrap();
@@ -100,10 +103,13 @@ fn verify_proof(
 
     let mut h = Hash::with_perm(perm);
 
-    let result = h.result_gadget(vars, &mut verifier).unwrap();
+    // Convert variables into linear combinations
+    let lcs: Vec<LinearCombination> = vars.iter().map(|&x| x.into()).collect();
+
+    let result = h.result_gadget(lcs, &mut verifier).unwrap();
 
     // Add preimage gadget
-    preimage_gadget(digest,result, &mut verifier);
+    preimage_gadget(digest, result, &mut verifier);
 
     verifier.verify(&proof, &pc_gens, &bp_gens).unwrap()
 }
