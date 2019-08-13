@@ -61,7 +61,7 @@ impl Hash {
 
     pub fn result_gadget(
         &mut self,
-        input: Vec<Variable>,
+        input: Vec<LinearCombination>,
         cs: &mut dyn ConstraintSystem,
     ) -> Option<LinearCombination> {
         // Pad remaining width with zero
@@ -191,8 +191,11 @@ mod test {
             .map(|input| prover.commit(*input, Scalar::random(&mut rng)))
             .unzip();
 
+        // Convert variables into linear combinations
+        let lcs : Vec<LinearCombination> = vars.iter().map(|&x| x.into()).collect();
+
         // Build CS
-        let results = h.result_gadget(vars, &mut prover).unwrap();
+        let results = h.result_gadget(lcs, &mut prover).unwrap();
 
         // preimage gadget
         preimage_gadget(digest, results, &mut prover);
@@ -223,7 +226,10 @@ mod test {
 
         let mut h = Hash::with_perm(perm);
 
-        let result = h.result_gadget(vars, &mut verifier).unwrap();
+        // Convert variables into linear combinations
+        let lcs : Vec<LinearCombination> = vars.iter().map(|&x| x.into()).collect();
+
+        let result = h.result_gadget(lcs, &mut verifier).unwrap();
 
         // constrain preimage to be digest
         preimage_gadget(digest, result, &mut verifier);
