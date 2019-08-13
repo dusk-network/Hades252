@@ -1,6 +1,130 @@
-use crate::hash::Hash;
-use bulletproofs::r1cs::{ConstraintSystem, LinearCombination, Variable};
+#![feature(test)]
+
+extern crate hades252;
+use hades252::hash::Hash;
+
+use bulletproofs::r1cs::{Prover, Verifier, ConstraintSystem};
+use bulletproofs::{BulletproofGens, PedersenGens};
+use curve25519_dalek::ristretto::CompressedRistretto;
+use merlin::Transcript;
+use rand::thread_rng;
+
+use bulletproofs::r1cs::{LinearCombination, R1CSError, R1CSProof, Variable};
 use curve25519_dalek::scalar::Scalar;
+
+type ProofResult<T> = Result<T, R1CSError>;
+
+
+pub fn prove(
+    d: Scalar,
+    k: Scalar,
+    y: Scalar,
+    y_inv: Scalar,
+    q: Scalar,
+    z_img: Scalar,
+    seed: Scalar,
+    pub_list: Vec<Scalar>,
+    toggle: usize,
+) -> ProofResult<(
+    R1CSProof,
+    Vec<CompressedRistretto>,
+    Vec<CompressedRistretto>,
+)> {
+    let pc_gens = PedersenGens::default();
+    let bp_gens = BulletproofGens::new(2048, 1);
+
+    let mut transcript = Transcript::new(b"BlindBidProofGadget");
+
+    // 1. Create a prover
+    let mut prover = Prover::new(&pc_gens, &mut transcript);
+
+    // 2. Commit high-level variables
+    let mut blinding_rng = rand::thread_rng();
+
+    let (commitments, vars): (Vec<_>, Vec<_>) = [d, k, y, y_inv]
+        .into_iter()
+        .map(|v| prover.commit(*v, Scalar::random(&mut blinding_rng)))
+        .unzip();
+
+    let (t_c, t_v): (Vec<_>, Vec<_>) = (0..pub_list.len())
+        .map(|x| {
+            prover.commit(
+                Scalar::from((x == toggle) as u8),
+                Scalar::random(&mut thread_rng()),
+            )
+        })
+        .unzip();
+
+    // public list of numbers
+    let l_v: Vec<LinearCombination> = pub_list.iter().map(|&x| x.into()).collect::<Vec<_>>();
+
+    // 3. Build a CS
+    proof_gadget(
+        &mut prover,
+        vars[0].into(),
+        vars[1].into(),
+        vars[3].into(),
+        q.into(),
+        z_img.into(),
+        seed.into(),
+        t_v,
+        l_v,
+    );
+
+    // 4. Make a proof
+    let proof = prover.prove(&bp_gens)?;
+
+    Ok((proof, commitments, t_c))
+}
+
+pub fn verify(
+    proof: R1CSProof,
+    commitments: Vec<CompressedRistretto>,
+    t_c: Vec<CompressedRistretto>,
+    seed: Scalar,
+    pub_list: Vec<Scalar>,
+    q: Scalar,
+    z_img: Scalar,
+) -> ProofResult<()> {
+    let pc_gens = PedersenGens::default();
+    let bp_gens = BulletproofGens::new(2048, 1);
+
+    // Verifier logic
+
+    let mut transcript = Transcript::new(b"BlindBidProofGadget");
+
+    // 1. Create a verifier
+    let mut verifier = Verifier::new(&mut transcript);
+
+    // 2. Commit high-level variables
+    let vars: Vec<_> = commitments.iter().map(|v| verifier.commit(*v)).collect();
+
+    let t_c_v: Vec<Variable> = t_c.iter().map(|v| verifier.commit(*v).into()).collect();
+
+    // public list of numbers
+    let l_v: Vec<LinearCombination> = pub_list
+        .iter()
+        .map(|&x| Scalar::from(x).into())
+        .collect::<Vec<_>>();
+
+    // 3. Build a CS
+    proof_gadget(
+        &mut verifier,
+        vars[0].into(),
+        vars[1].into(),
+        vars[3].into(),
+        q.into(),
+        z_img.into(),
+        seed.into(),
+        t_c_v,
+        l_v,
+    );
+
+    // 4. Verify the proof
+    verifier
+        .verify(&proof, &pc_gens, &bp_gens)
+        .map_err(|_| R1CSError::VerificationError)
+}
 
 pub fn proof_gadget<CS: ConstraintSystem>(
     cs: &mut CS,
@@ -10,7 +134,6 @@ pub fn proof_gadget<CS: ConstraintSystem>(
     q: LinearCombination,
     z_img: LinearCombination,
     seed: LinearCombination,
-    constants: &Vec<Scalar>,
     toggle: Vec<Variable>, // private: binary list indicating private number is somewhere in list
     items: Vec<LinearCombination>, // public list
 ) {
