@@ -115,11 +115,11 @@ impl Permutation {
     pub fn constrain_result(
         &self,
         cs: &mut dyn ConstraintSystem,
-        words: Vec<Variable>,
+        words: Vec<LinearCombination>,
     ) -> Result<Vec<LinearCombination>, PermError> {
         let mut constants_iter = self.constants.iter();
 
-        let mut new_words: Vec<LinearCombination> = words.iter().map(|&var| var.into()).collect();
+        let mut new_words = words;
 
         // Apply R_f full rounds
         for _ in 0..self.full_rounds / 2 {
