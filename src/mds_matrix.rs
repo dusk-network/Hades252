@@ -77,7 +77,7 @@ fn constrain_dot_product(a: &[Scalar], b: Vec<LinearCombination>) -> LinearCombi
         sum = sum + l_c;
     }
 
-    sum
+    sum.simplify()
 }
 
 mod test {

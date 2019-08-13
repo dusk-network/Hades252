@@ -124,16 +124,19 @@ impl Permutation {
         // Apply R_f full rounds
         for _ in 0..self.full_rounds / 2 {
             new_words = self.constrain_apply_full_round(&mut constants_iter, new_words, cs)?;
+            new_words = new_words.into_iter().map(|word| word.simplify()).collect();
         }
 
         // Apply R_P partial rounds
         for _ in 0..self.partial_rounds {
             new_words = self.constrain_apply_partial_round(&mut constants_iter, new_words, cs)?;
+            new_words = new_words.into_iter().map(|word| word.simplify()).collect();
         }
 
         // Apply R_f full rounds
         for _ in 0..self.full_rounds / 2 {
             new_words = self.constrain_apply_full_round(&mut constants_iter, new_words, cs)?;
+            new_words = new_words.into_iter().map(|word| word.simplify()).collect();
         }
 
         Ok(new_words)
