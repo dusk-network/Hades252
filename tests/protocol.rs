@@ -1,4 +1,8 @@
+#![feature(test)]
+
 extern crate hades252;
+use hades252::hash::Hash;
+use hades252::permutation::Permutation;
 
 use bulletproofs::r1cs::{Prover, R1CSProof, Verifier};
 use bulletproofs::{BulletproofGens, PedersenGens};
@@ -6,8 +10,8 @@ use curve25519_dalek::ristretto::CompressedRistretto;
 use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
 
-use hades252::hash::Hash;
-use hades252::permutation::Permutation;
+extern crate test;
+use test::Bencher;
 
 #[test]
 fn main() {
@@ -17,15 +21,25 @@ fn main() {
 
     // Common poseidon parameters
     let width = 4;
-    let full_rounds = 2;
-    let partial_rounds = 3;
+    let full_rounds = 8;
+    let partial_rounds = 59;
 
     // Prover makes proof
     // Proof claims that the prover knows the pre-image to the digest produced from the poseidon hash function
-    let (digest, proof, commitments) = make_proof(width, full_rounds, partial_rounds, &pc_gens, &bp_gens);
+    let (digest, proof, commitments) =
+        make_proof(width, full_rounds, partial_rounds, &pc_gens, &bp_gens);
 
     // Verify verifies proof
-    verify_proof(width, full_rounds, partial_rounds, &pc_gens, &bp_gens, digest, proof, commitments)
+    verify_proof(
+        width,
+        full_rounds,
+        partial_rounds,
+        &pc_gens,
+        &bp_gens,
+        digest,
+        proof,
+        commitments,
+    )
 }
 
 fn make_proof(
