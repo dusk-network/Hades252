@@ -1,0 +1,55 @@
+[package]
+name = "bulletproofs"
+version = "1.0.4"
+authors = ["Cathie Yun <cathieyun@gmail.com>", 
+           "Henry de Valence <hdevalence@hdevalence.ca>",
+           "Oleg Andreev <oleganza@gmail.com>"]
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/dalek-cryptography/bulletproofs"
+categories = ["cryptography"]
+keywords = ["cryptography", "crypto", "ristretto", "zero-knowledge", "bulletproofs"]
+description = "A pure-Rust implementation of Bulletproofs using Ristretto"
+
+[dependencies]
+curve25519-dalek = { version = "^1.2.3", features = ["serde"] }
+subtle = "2"
+sha3 = "0.8"
+digest = "0.8"
+rand = "0.6"
+byteorder = "1"
+serde = "1"
+serde_derive = "1"
+failure = "0.1"
+merlin = "1.1"
+clear_on_drop = "0.2"
+
+[dev-dependencies]
+hex = "0.3"
+criterion = "0.2"
+bincode = "1"
+rand_chacha = "0.1"
+
+[features]
+avx2_backend = ["curve25519-dalek/avx2_backend"]
+yoloproofs = []
+
+[[test]]
+name = "range_proof"
+
+[[test]]
+name = "r1cs"
+required-features = ["yoloproofs"]
+
+[[bench]]
+name = "range_proof"
+harness = false
+
+[[bench]]
+name = "generators"
+harness = false
+
+[[bench]]
+name = "r1cs"
+harness = false
+required-features = ["yoloproofs"]
