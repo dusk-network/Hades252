@@ -4,7 +4,7 @@ extern crate hades252;
 use hades252::hash::Hash;
 use hades252::permutation::Permutation;
 
-use bulletproofs::r1cs::{Prover, R1CSProof, Verifier};
+use bulletproofs::r1cs::{Prover, R1CSProof, Verifier, LinearCombination, ConstraintSystem};
 use bulletproofs::{BulletproofGens, PedersenGens};
 use curve25519_dalek::ristretto::CompressedRistretto;
 use curve25519_dalek::scalar::Scalar;
@@ -69,7 +69,10 @@ fn make_proof(
         .unzip();
 
     // Build CS
-    h.result_gadget(digest, vars, &mut prover).unwrap();
+    let result = h.result_gadget(vars, &mut prover).unwrap();
+
+    // Add preimage gadget 
+    preimage_gadget(digest,result, &mut prover);
 
     // Prove
     let proof = prover.prove(&bp_gens).unwrap();
@@ -97,7 +100,19 @@ fn verify_proof(
 
     let mut h = Hash::with_perm(perm);
 
-    h.result_gadget(digest, vars, &mut verifier);
+    let result = h.result_gadget(vars, &mut verifier).unwrap();
+
+    // Add preimage gadget
+    preimage_gadget(digest,result, &mut verifier);
 
     verifier.verify(&proof, &pc_gens, &bp_gens).unwrap()
+}
+
+fn preimage_gadget(
+    digest: Scalar,
+    gadget_digest: LinearCombination,
+    cs: &mut dyn ConstraintSystem,
+) {
+    let digest_lc: LinearCombination = digest.into();
+    cs.constrain(digest_lc - gadget_digest)
 }

@@ -61,7 +61,6 @@ impl Hash {
 
     pub fn result_gadget(
         &mut self,
-        digest: Scalar,
         input: Vec<Variable>,
         cs: &mut dyn ConstraintSystem,
     ) -> Option<LinearCombination> {
@@ -71,11 +70,7 @@ impl Hash {
         // Apply permutation
         let words = self.perm.constrain_result(cs, input).ok();
         match words {
-            Some(words) => {
-                // constrain output to be digest
-                cs.constrain(words[1].clone() - digest);
-                Some(words[1].clone())
-            }
+            Some(words) => Some(words[1].clone()),
             None => None,
         }
     }
@@ -197,7 +192,10 @@ mod test {
             .unzip();
 
         // Build CS
-        h.result_gadget(digest, vars, &mut prover).unwrap();
+        let results = h.result_gadget(vars, &mut prover).unwrap();
+
+        // preimage gadget
+        preimage_gadget(digest, results, &mut prover);
 
         // Prove
         let proof = prover.prove(&bp_gens).unwrap();
@@ -225,8 +223,20 @@ mod test {
 
         let mut h = Hash::with_perm(perm);
 
-        h.result_gadget(digest, vars, &mut verifier);
+        let result = h.result_gadget(vars, &mut verifier).unwrap();
+
+        // constrain preimage to be digest
+        preimage_gadget(digest, result, &mut verifier);
 
         verifier.verify(&proof, &pc_gens, &bp_gens).unwrap()
+    }
+
+    fn preimage_gadget(
+        digest: Scalar,
+        gadget_digest: LinearCombination,
+        cs: &mut dyn ConstraintSystem,
+    ) {
+        let digest_lc: LinearCombination = digest.into();
+        cs.constrain(digest_lc - gadget_digest)
     }
 }
