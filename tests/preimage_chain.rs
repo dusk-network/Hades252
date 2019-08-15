@@ -123,9 +123,11 @@ fn preimage_chain_gadget(
 ) {
     let mut h = Hash::new();
     h.reset();
-    
+
+    let zero : LinearCombination = Scalar::zero().into();
+
     // x = H(y)
-    let x = h.result_gadget(vec![pre_image_y], cs).unwrap();
+    let x = h.result_gadget(vec![zero.clone(), pre_image_y, zero.clone(),zero.clone(),zero.clone(),zero.clone(),zero.clone(),zero.clone(),zero.clone()], cs).unwrap();
     cs.constrain(x_lc - x);
 
     // // z = H(x)
