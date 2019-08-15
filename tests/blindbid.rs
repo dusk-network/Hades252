@@ -138,15 +138,15 @@ pub fn proof_gadget<CS: ConstraintSystem>(
     let mut hades = Hash::new();
 
     // m = h(k)
-    hades.input_lc(k);
+    hades.input_lc(k).unwrap();
     let m = hades.result_gadget(cs).unwrap();
 
     // // reset hash
     hades.reset();
 
     // x = h(d, m)
-    hades.input_lc(d.clone());
-    hades.input_lc(m.clone());
+    hades.input_lc(d.clone()).unwrap();
+    hades.input_lc(m.clone()).unwrap();
     let x = hades.result_gadget(cs).unwrap();
 
     // // reset hash
@@ -155,16 +155,16 @@ pub fn proof_gadget<CS: ConstraintSystem>(
     one_of_many_gadget(cs, x.clone(), toggle, items);
 
     // y = h(seed, x)
-    hades.input_lc(seed.clone());
-    hades.input_lc(x);
+    hades.input_lc(seed.clone()).unwrap();
+    hades.input_lc(x).unwrap();
     let y = hades.result_gadget(cs).unwrap();
 
     // // reset hash
     hades.reset();
 
     // z = h(seed, m)
-    hades.input_lc(seed);
-    hades.input_lc(m);
+    hades.input_lc(seed).unwrap();
+    hades.input_lc(m).unwrap();
     let z = hades.result_gadget(cs).unwrap();
 
     cs.constrain(z_img.clone() - z);
