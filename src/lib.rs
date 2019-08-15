@@ -1,6 +1,6 @@
 #![feature(test)]
 
-mod errors;
+pub mod errors;
 pub mod hash;
 mod mds_matrix;
 pub mod permutation;
