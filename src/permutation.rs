@@ -92,7 +92,7 @@ impl Permutation {
         self.data.push(scalar);
         Ok(())
     }
-    pub fn input_cs(&mut self, lc: LinearCombination) -> Result<(), PermError> {
+    pub fn input_lc(&mut self, lc: LinearCombination) -> Result<(), PermError> {
         if self.input_full(&self.data_lc) {
             return Err(PermError::InputFull);
         }
