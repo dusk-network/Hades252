@@ -38,7 +38,9 @@ impl Hash {
     pub fn inputs(&mut self, scalars: Vec<Scalar>) -> Result<(), PermError> {
         self.perm.inputs(scalars)
     }
-
+    pub fn input_lc(&mut self, lc: LinearCombination) -> Result<(), PermError> {
+        self.perm.input_lc(lc)
+    }
     pub fn result(&mut self) -> Option<Scalar> {
 
         // Apply permutation
