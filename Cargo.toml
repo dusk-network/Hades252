@@ -14,3 +14,14 @@ rand = "0.6"
 [dependencies.bulletproofs]
 path = "./bulletproofs"
 features = ["yoloproofs"]
+
+[profile.dev]
+opt-level = 3
+debug = false
+rpath = false
+lto = false
+debug-assertions = false
+codegen-units = 16
+panic = 'unwind'
+incremental = false
+overflow-checks = false
