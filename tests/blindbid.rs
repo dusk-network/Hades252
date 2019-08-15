@@ -137,7 +137,6 @@ pub fn proof_gadget<CS: ConstraintSystem>(
     items: Vec<LinearCombination>, // public list
 ) {
     let mut hades = Hash::new();
-    // Prove z
 
     // m = h(k)
     hades.input_lc(k);
@@ -147,7 +146,6 @@ pub fn proof_gadget<CS: ConstraintSystem>(
     hades.reset();
 
     // x = h(d, m)
-
     hades.input_lc(d.clone());
     hades.input_lc(m.clone());
     let x = hades.result_gadget(cs).unwrap();
