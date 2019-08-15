@@ -17,7 +17,6 @@ type ProofResult<T> = Result<T, R1CSError>;
 pub fn prove(
     d: Scalar,
     k: Scalar,
-    y: Scalar,
     y_inv: Scalar,
     q: Scalar,
     z_img: Scalar,
@@ -30,7 +29,7 @@ pub fn prove(
     Vec<CompressedRistretto>,
 )> {
     let pc_gens = PedersenGens::default();
-    let bp_gens = BulletproofGens::new(2048, 1);
+    let bp_gens = BulletproofGens::new(4096, 1);
 
     let mut transcript = Transcript::new(b"BlindBidProofGadget");
 
@@ -40,7 +39,7 @@ pub fn prove(
     // 2. Commit high-level variables
     let mut blinding_rng = rand::thread_rng();
 
-    let (commitments, vars): (Vec<_>, Vec<_>) = [d, k, y, y_inv]
+    let (commitments, vars): (Vec<_>, Vec<_>) = [d, k, y_inv]
         .into_iter()
         .map(|v| prover.commit(*v, Scalar::random(&mut blinding_rng)))
         .unzip();
@@ -62,7 +61,7 @@ pub fn prove(
         &mut prover,
         vars[0].into(),
         vars[1].into(),
-        vars[3].into(),
+        vars[2].into(),
         q.into(),
         z_img.into(),
         seed.into(),
@@ -86,7 +85,7 @@ pub fn verify(
     z_img: Scalar,
 ) -> ProofResult<()> {
     let pc_gens = PedersenGens::default();
-    let bp_gens = BulletproofGens::new(2048, 1);
+    let bp_gens = BulletproofGens::new(4096, 1);
 
     // Verifier logic
 
@@ -111,7 +110,7 @@ pub fn verify(
         &mut verifier,
         vars[0].into(),
         vars[1].into(),
-        vars[3].into(),
+        vars[2].into(),
         q.into(),
         z_img.into(),
         seed.into(),
@@ -142,7 +141,7 @@ pub fn proof_gadget<CS: ConstraintSystem>(
     hades.input_lc(k);
     let m = hades.result_gadget(cs).unwrap();
 
-    // reset hash
+    // // reset hash
     hades.reset();
 
     // x = h(d, m)
@@ -150,7 +149,7 @@ pub fn proof_gadget<CS: ConstraintSystem>(
     hades.input_lc(m.clone());
     let x = hades.result_gadget(cs).unwrap();
 
-    // reset hash
+    // // reset hash
     hades.reset();
 
     one_of_many_gadget(cs, x.clone(), toggle, items);
@@ -160,7 +159,7 @@ pub fn proof_gadget<CS: ConstraintSystem>(
     hades.input_lc(x);
     let y = hades.result_gadget(cs).unwrap();
 
-    // reset hash
+    // // reset hash
     hades.reset();
 
     // z = h(seed, m)
@@ -168,9 +167,9 @@ pub fn proof_gadget<CS: ConstraintSystem>(
     hades.input_lc(m);
     let z = hades.result_gadget(cs).unwrap();
 
-    cs.constrain(z_img - z);
+    cs.constrain(z_img.clone() - z);
 
-    // Prove Q
+    // // Prove Q
     score_gadget(cs, d, y, y_inv, q);
 }
 
@@ -244,4 +243,89 @@ fn boolean_gadget<CS: ConstraintSystem>(cs: &mut CS, a1: LinearCombination) {
     let one: LinearCombination = Scalar::one().into();
     let (_, _, c_var) = cs.multiply(a, one - a1);
     cs.constrain(c_var.into());
+}
+
+use rand::rngs::OsRng;
+use rand::RngCore;
+
+#[test]
+fn test_prove_verify() {
+    let mut csprng: OsRng = OsRng::new().unwrap();
+
+    let k: Scalar = Scalar::random(&mut csprng);
+    let m = calc_m(k);
+
+    let d: Scalar = Scalar::random(&mut csprng);
+    let bid: Scalar = calc_x(d, m);
+
+    let seed: Scalar = Scalar::random(&mut csprng);
+    let y: Scalar = calc_y(seed, bid);
+    let y_inv: Scalar = y.invert();
+
+    let q: Scalar = y_inv * d;
+
+    let z_img: Scalar = calc_z(seed, m);
+
+    let bid_list_size = 5;
+    let secret_bid_position = 3;
+    let bid_list = rand_bid_list(bid_list_size, bid, secret_bid_position);
+
+    let (proof, commitments, t_c) = prove(
+        d,
+        k,
+        y_inv,
+        q,
+        z_img,
+        seed,
+        bid_list.clone(),
+        secret_bid_position,
+    )
+    .unwrap();
+
+    verify(proof, commitments, t_c, seed, bid_list, q, z_img).unwrap();
+}
+
+fn calc_x(d: Scalar, m: Scalar) -> Scalar {
+    let mut hades = Hash::new();
+    hades.inputs(vec![d, m]).unwrap();
+    hades.result().unwrap()
+}
+
+fn calc_y(seed: Scalar, x: Scalar) -> Scalar {
+    let mut hades = Hash::new();
+    hades.inputs(vec![seed, x]).unwrap();
+    hades.result().unwrap()
+}
+
+fn calc_m(k: Scalar) -> Scalar {
+    let mut hades = Hash::new();
+    hades.input(k).unwrap();
+    hades.result().unwrap()
+}
+
+fn calc_z(seed: Scalar, m: Scalar) -> Scalar {
+    let mut hades = Hash::new();
+    hades.inputs(vec![seed, m]).unwrap();
+    hades.result().unwrap()
+}
+
+fn rand_bid_list(size: usize, secret_bid: Scalar, insert_at: usize) -> Vec<Scalar> {
+    assert!(insert_at < size);
+
+    let mut csprng = OsRng::new().unwrap();;
+
+    let mut bid_list: Vec<Scalar> = Vec::with_capacity(size);
+    for i in 0..size {
+        if insert_at == i {
+            bid_list.push(secret_bid);
+            continue;
+        }
+
+        let x_i: Scalar = Scalar::from(csprng.next_u64());
+        bid_list.push(x_i);
+    }
+
+    assert!(bid_list[insert_at] == secret_bid);
+
+    bid_list
 }
