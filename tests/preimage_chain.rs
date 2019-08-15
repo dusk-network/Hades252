@@ -134,7 +134,7 @@ fn preimage_chain_gadget(
     h.input_lc(x).unwrap();
     let z = h.result_gadget(cs).unwrap();
     cs.constrain(z_lc - z.clone());
-    
+
     h.reset();
 
     // d = H(z)

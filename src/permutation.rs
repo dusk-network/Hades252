@@ -10,11 +10,11 @@ pub struct Permutation {
     full_rounds: usize,
     partial_rounds: usize,
 
-    // data to be used in the solid instantiation of the permutation struct 
+    // data to be used in the solid instantiation of the permutation struct
     pub(crate) data: Vec<Scalar>,
-    // data to be used in the constraint system instantiation of the permutation struct 
+    // data to be used in the constraint system instantiation of the permutation struct
     pub(crate) data_lc: Vec<LinearCombination>,
-    
+
     constants: RoundConstants,
     matrix: MDSMatrix,
 }
@@ -54,7 +54,6 @@ impl Permutation {
 
         Ok(perm)
     }
-
 }
 
 // Utility methods on the permutation struct
@@ -63,10 +62,10 @@ impl Permutation {
         self.data.clear();
         self.data_lc.clear();
     }
-    fn input_full<T>(&self, data : &Vec<T>) -> bool {
+    fn input_full<T>(&self, data: &Vec<T>) -> bool {
         data.len() == self.t
     }
-    pub fn width_left<T>(&self, data : &Vec<T>) -> usize {
+    pub fn width_left<T>(&self, data: &Vec<T>) -> usize {
         self.t - data.len()
     }
     pub fn input_bytes(&mut self, bytes: &[u8]) -> Result<(), PermError> {
@@ -109,7 +108,7 @@ impl Permutation {
     }
     fn pad_lc(&mut self) {
         let pad_amount = self.width_left(&self.data_lc);
-        let zero_lc : LinearCombination = Scalar::zero().into();
+        let zero_lc: LinearCombination = Scalar::zero().into();
         let zeroes = vec![zero_lc; pad_amount];
 
         self.data_lc.extend(zeroes);
@@ -118,8 +117,8 @@ impl Permutation {
 
 impl Permutation {
     pub fn result(&mut self) -> Result<Vec<Scalar>, PermError> {
-         // Pad remaining width with zero
-         self.pad();
+        // Pad remaining width with zero
+        self.pad();
 
         let mut constants_iter = self.constants.iter();
 
