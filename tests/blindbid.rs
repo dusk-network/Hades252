@@ -137,16 +137,18 @@ pub fn proof_gadget<CS: ConstraintSystem>(
     items: Vec<LinearCombination>, // public list
 ) {
     let mut hades = Hash::new();
-    // Prove z
 
     // m = h(k)
-    let m = hades.result_gadget(vec![k], cs).unwrap();
+    hades.input_lc(k);
+    let m = hades.result_gadget(cs).unwrap();
 
     // reset hash
     hades.reset();
 
     // x = h(d, m)
-    let x = hades.result_gadget(vec![d.clone(), m.clone()], cs).unwrap();
+    hades.input_lc(d.clone());
+    hades.input_lc(m.clone());
+    let x = hades.result_gadget(cs).unwrap();
 
     // reset hash
     hades.reset();
@@ -154,13 +156,17 @@ pub fn proof_gadget<CS: ConstraintSystem>(
     one_of_many_gadget(cs, x.clone(), toggle, items);
 
     // y = h(seed, x)
-    let y = hades.result_gadget(vec![seed.clone(), x], cs).unwrap();
+    hades.input_lc(seed.clone());
+    hades.input_lc(x);
+    let y = hades.result_gadget(cs).unwrap();
 
     // reset hash
     hades.reset();
 
     // z = h(seed, m)
-    let z = hades.result_gadget(vec![seed, m], cs).unwrap();
+    hades.input_lc(seed);
+    hades.input_lc(m);
+    let z = hades.result_gadget(cs).unwrap();
 
     cs.constrain(z_img - z);
 
