@@ -17,7 +17,6 @@ type ProofResult<T> = Result<T, R1CSError>;
 pub fn prove(
     d: Scalar,
     k: Scalar,
-    x: Scalar,
     y_inv: Scalar,
     q: Scalar,
     z_img: Scalar,
@@ -40,7 +39,7 @@ pub fn prove(
     // 2. Commit high-level variables
     let mut blinding_rng = rand::thread_rng();
 
-    let (commitments, vars): (Vec<_>, Vec<_>) = [d, k, x, y_inv]
+    let (commitments, vars): (Vec<_>, Vec<_>) = [d, k, y_inv]
         .into_iter()
         .map(|v| prover.commit(*v, Scalar::random(&mut blinding_rng)))
         .unzip();
@@ -63,7 +62,6 @@ pub fn prove(
         vars[0].into(),
         vars[1].into(),
         vars[2].into(),
-        vars[3].into(),
         q.into(),
         z_img.into(),
         seed.into(),
@@ -113,7 +111,6 @@ pub fn verify(
         vars[0].into(),
         vars[1].into(),
         vars[2].into(),
-        vars[3].into(),
         q.into(),
         z_img.into(),
         seed.into(),
@@ -131,7 +128,6 @@ pub fn proof_gadget<CS: ConstraintSystem>(
     cs: &mut CS,
     d: LinearCombination,
     k: LinearCombination,
-    x: LinearCombination,
     y_inv: LinearCombination,
     q: LinearCombination,
     z_img: LinearCombination,
@@ -164,17 +160,17 @@ pub fn proof_gadget<CS: ConstraintSystem>(
     let y = hades.result_gadget(cs).unwrap();
 
     // // reset hash
-    // hades.reset();
+    hades.reset();
 
     // z = h(seed, m)
     hades.input_lc(seed);
     hades.input_lc(m);
     let z = hades.result_gadget(cs).unwrap();
 
-    // cs.constrain(z_img.clone() - z);
+    cs.constrain(z_img.clone() - z);
 
     // // Prove Q
-    // score_gadget(cs, d, y, y_inv, q);
+    score_gadget(cs, d, y, y_inv, q);
 }
 
 fn score_gadget<CS: ConstraintSystem>(
@@ -277,7 +273,6 @@ fn test_prove_verify() {
     let (proof, commitments, t_c) = prove(
         d,
         k,
-        bid,
         y_inv,
         q,
         z_img,
