@@ -19,19 +19,19 @@ impl Hash {
         h
     }
 
-    pub fn input(&mut self, s: Scalar) -> Result<(), PermError> {
-        self.perm.input(s)
-    }
 
     pub fn data(&self) -> Vec<Scalar> {
         self.perm.data.clone()
     }
-
     pub fn reset(&mut self) {
         self.perm.reset();
-        self.perm.data.push(Scalar::from(0 as u8))
+        self.perm.data.push(Scalar::zero());
+        self.perm.data_lc.push(Scalar::zero().into());
     }
 
+    pub fn input(&mut self, s: Scalar) -> Result<(), PermError> {
+        self.perm.input(s)
+    }
     pub fn input_bytes(&mut self, bytes: &[u8]) -> Result<(), PermError> {
         self.perm.input_bytes(bytes)
     }
@@ -39,17 +39,7 @@ impl Hash {
         self.perm.inputs(scalars)
     }
 
-    fn pad(&mut self) {
-        let pad_amount = self.perm.width_left();
-        let zero = Scalar::from(0 as u8);
-        let zeroes = vec![zero; pad_amount];
-
-        self.perm.data.extend(zeroes)
-    }
-
     pub fn result(&mut self) -> Option<Scalar> {
-        // Pad remaining width with zero
-        self.pad();
 
         // Apply permutation
         let words = self.perm.result().ok();
@@ -64,8 +54,6 @@ impl Hash {
         input: Vec<LinearCombination>,
         cs: &mut dyn ConstraintSystem,
     ) -> Option<LinearCombination> {
-        // Pad remaining width with zero
-        self.pad();
 
         // Apply permutation
         let words = self.perm.constrain_result(cs, input).ok();
