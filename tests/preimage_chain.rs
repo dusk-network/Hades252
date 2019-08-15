@@ -122,19 +122,23 @@ fn preimage_chain_gadget(
     cs: &mut dyn ConstraintSystem,
 ) {
     let mut h = Hash::new();
-    h.reset();
-
-    let zero : LinearCombination = Scalar::zero().into();
 
     // x = H(y)
-    let x = h.result_gadget(vec![zero.clone(), pre_image_y, zero.clone(),zero.clone(),zero.clone(),zero.clone(),zero.clone(),zero.clone(),zero.clone()], cs).unwrap();
-    cs.constrain(x_lc - x);
+    h.input_lc(pre_image_y).unwrap();
+    let x = h.result_gadget(cs).unwrap();
+    cs.constrain(x_lc - x.clone());
 
-    // // z = H(x)
-    // let z = h.result_gadget(vec![x], cs).unwrap();
-    // h.reset();
+    h.reset();
 
-    // // d = H(z)
-    // let d = h.result_gadget(vec![z], cs).unwrap();
-    // cs.constrain(d - d_lc);
+    // z = H(x)
+    h.input_lc(x).unwrap();
+    let z = h.result_gadget(cs).unwrap();
+    cs.constrain(z_lc - z.clone());
+    
+    h.reset();
+
+    // d = H(z)
+    h.input_lc(z).unwrap();
+    let d = h.result_gadget(cs).unwrap();
+    cs.constrain(d - d_lc);
 }
