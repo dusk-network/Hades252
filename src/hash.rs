@@ -19,7 +19,6 @@ impl Hash {
         h
     }
 
-
     pub fn data(&self) -> Vec<Scalar> {
         self.perm.data.clone()
     }
@@ -42,7 +41,6 @@ impl Hash {
         self.perm.input_lc(lc)
     }
     pub fn result(&mut self) -> Option<Scalar> {
-
         // Apply permutation
         let words = self.perm.result().ok();
         match words {
@@ -51,11 +49,7 @@ impl Hash {
         }
     }
 
-    pub fn result_gadget(
-        &mut self,
-        cs: &mut dyn ConstraintSystem,
-    ) -> Option<LinearCombination> {
-
+    pub fn result_gadget(&mut self, cs: &mut dyn ConstraintSystem) -> Option<LinearCombination> {
         // Apply permutation
         let words = self.perm.constrain_result(cs).ok();
         match words {
