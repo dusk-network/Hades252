@@ -13,7 +13,7 @@ use bulletproofs::r1cs::{LinearCombination, R1CSError, R1CSProof, Variable};
 use curve25519_dalek::scalar::Scalar;
 
 type ProofResult<T> = Result<T, R1CSError>;
-
+use std::time::{Duration, Instant};
 pub fn prove(
     d: Scalar,
     k: Scalar,
@@ -23,6 +23,7 @@ pub fn prove(
     seed: Scalar,
     pub_list: Vec<Scalar>,
     toggle: usize,
+    hash: &mut Hash,
 ) -> ProofResult<(
     R1CSProof,
     Vec<CompressedRistretto>,
@@ -56,6 +57,9 @@ pub fn prove(
     // public list of numbers
     let l_v: Vec<LinearCombination> = pub_list.iter().map(|&x| x.into()).collect::<Vec<_>>();
 
+    println!("Proving");
+    let start = Instant::now();
+
     // 3. Build a CS
     proof_gadget(
         &mut prover,
@@ -67,10 +71,14 @@ pub fn prove(
         seed.into(),
         t_v,
         l_v,
+        hash,
     );
 
     // 4. Make a proof
     let proof = prover.prove(&bp_gens)?;
+
+    let end = start.elapsed();
+    println!("Proving time is {:?}", end);
 
     Ok((proof, commitments, t_c))
 }
@@ -83,7 +91,10 @@ pub fn verify(
     pub_list: Vec<Scalar>,
     q: Scalar,
     z_img: Scalar,
+    hash: &mut Hash,
 ) -> ProofResult<()> {
+    hash.reset();
+
     let pc_gens = PedersenGens::default();
     let bp_gens = BulletproofGens::new(4096, 1);
 
@@ -105,6 +116,8 @@ pub fn verify(
         .map(|&x| Scalar::from(x).into())
         .collect::<Vec<_>>();
 
+    println!("Verifying");
+    let start = Instant::now();
     // 3. Build a CS
     proof_gadget(
         &mut verifier,
@@ -116,12 +129,18 @@ pub fn verify(
         seed.into(),
         t_c_v,
         l_v,
+        hash,
     );
 
     // 4. Verify the proof
-    verifier
+    let res = verifier
         .verify(&proof, &pc_gens, &bp_gens)
-        .map_err(|_| R1CSError::VerificationError)
+        .map_err(|_| R1CSError::VerificationError);
+
+    let end = start.elapsed();
+
+    println!("Verification time is {:?}", end);
+    res
 }
 
 pub fn proof_gadget<CS: ConstraintSystem>(
@@ -134,9 +153,8 @@ pub fn proof_gadget<CS: ConstraintSystem>(
     seed: LinearCombination,
     toggle: Vec<Variable>, // private: binary list indicating private number is somewhere in list
     items: Vec<LinearCombination>, // public list
+    hades: &mut Hash,
 ) {
-    let mut hades = Hash::new();
-
     // m = h(k)
     hades.input_lc(k).unwrap();
     let m = hades.result_gadget(cs).unwrap();
@@ -250,6 +268,8 @@ use rand::RngCore;
 
 #[test]
 fn test_prove_verify() {
+    let mut hash = Hash::new();
+
     let mut csprng: OsRng = OsRng::new().unwrap();
 
     let k: Scalar = Scalar::random(&mut csprng);
@@ -279,10 +299,11 @@ fn test_prove_verify() {
         seed,
         bid_list.clone(),
         secret_bid_position,
+        &mut hash,
     )
     .unwrap();
 
-    verify(proof, commitments, t_c, seed, bid_list, q, z_img).unwrap();
+    verify(proof, commitments, t_c, seed, bid_list, q, z_img, &mut hash).unwrap();
 }
 
 fn calc_x(d: Scalar, m: Scalar) -> Scalar {
