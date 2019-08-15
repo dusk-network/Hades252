@@ -10,8 +10,11 @@ pub struct Permutation {
     full_rounds: usize,
     partial_rounds: usize,
 
+    // data to be used in the solid instantiation of the permutation struct 
     pub(crate) data: Vec<Scalar>,
-
+    // data to be used in the constraint system instantiation of the permutation struct 
+    pub(crate) data_lc: Vec<LinearCombination>,
+    
     constants: RoundConstants,
     matrix: MDSMatrix,
 }
@@ -26,6 +29,7 @@ impl Default for Permutation {
             full_rounds: full_founds,
             partial_rounds: partial_rounds,
             data: Vec::with_capacity(width),
+            data_lc: Vec::with_capacity(width),
             constants: RoundConstants::generate(full_founds, partial_rounds, width),
             matrix: MDSMatrix::generate(width),
         }
@@ -43,6 +47,7 @@ impl Permutation {
             full_rounds: full_rounds,
             partial_rounds: partial_rounds,
             data: Vec::with_capacity(t),
+            data_lc: Vec::with_capacity(t),
             constants: RoundConstants::generate(full_rounds, partial_rounds, t),
             matrix: MDSMatrix::generate(t),
         };
@@ -66,10 +71,11 @@ impl Permutation {
 // Utility methods on the permutation struct
 impl Permutation {
     pub fn reset(&mut self) {
-        self.data.clear()
+        self.data.clear();
+        self.data_lc.clear();
     }
-    fn input_full(&self) -> bool {
-        self.data.len() == self.t
+    fn input_full<T>(&self, data : &Vec<T>) -> bool {
+        data.len() == self.t
     }
     pub fn width_left(&self) -> usize {
         self.t - self.data.len()
@@ -80,16 +86,40 @@ impl Permutation {
         self.input(scalar)
     }
     pub fn input(&mut self, scalar: Scalar) -> Result<(), PermError> {
-        if self.input_full() {
+        if self.input_full(&self.data) {
             return Err(PermError::InputFull);
         }
         self.data.push(scalar);
         Ok(())
     }
+    pub fn input_cs(&mut self, lc: LinearCombination) -> Result<(), PermError> {
+        if self.input_full(&self.data_lc) {
+            return Err(PermError::InputFull);
+        }
+        self.data_lc.push(lc);
+        Ok(())
+    }
+    fn pad(&mut self) {
+        let pad_amount = self.width_left();
+        let zero = Scalar::zero();
+        let zeroes = vec![zero; pad_amount];
+
+        self.data.extend(zeroes);
+    }
+    fn pad_lc(&mut self) {
+        let pad_amount = self.width_left();
+        let zero_lc : LinearCombination= Scalar::zero().into();
+        let zeroes = vec![zero_lc; pad_amount];
+
+        self.data_lc.extend(zeroes);
+    }
 }
 
 impl Permutation {
-    pub fn result(&self) -> Result<Vec<Scalar>, PermError> {
+    pub fn result(&mut self) -> Result<Vec<Scalar>, PermError> {
+         // Pad remaining width with zero
+         self.pad();
+
         let mut constants_iter = self.constants.iter();
 
         let mut new_words: Vec<Scalar> = self.data.clone();
@@ -113,10 +143,13 @@ impl Permutation {
     }
 
     pub fn constrain_result(
-        &self,
+        &mut self,
         cs: &mut dyn ConstraintSystem,
         words: Vec<LinearCombination>,
     ) -> Result<Vec<LinearCombination>, PermError> {
+        // Pad remaining width with zero
+        self.pad_lc();
+
         let mut constants_iter = self.constants.iter();
 
         let mut new_words = words;
