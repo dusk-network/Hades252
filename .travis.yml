@@ -5,6 +5,11 @@ os:
   - linux
 #  - osx  CodeCov doesn't support it so it's non tested now.
 
+matrix:
+  fast_finish: false
+  include:
+  - rust: nightly
+
 addons:
   apt:
     packages:
@@ -15,12 +20,14 @@ addons:
       - gcc
       - binutils-dev
 
+# Update nightly and set it for all of the directories.
+before_script:
+  - rustup update nightly
+  - rustup override set nightly
+
 
 # Main build
 script:
-  # Update nightly and set it for all of the directories.
-  - rustup update nightly
-  - rustup default nightly
   # Run tests/builds
   - cargo check
   - cargo build --release --verbose --all
