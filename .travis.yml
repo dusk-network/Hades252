@@ -18,6 +18,10 @@ addons:
 
 # Main build
 script:
+  # Update nightly and set it for all of the directories.
+  - rustup update nightly
+  - rustup default nightly
+  # Run tests/builds
   - cargo check
   - cargo build --release --verbose --all
   - cargo test --verbose --all
