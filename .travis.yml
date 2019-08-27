@@ -1,0 +1,39 @@
+language: rust
+sudo: true
+cache: cargo
+os:
+  - linux
+#  - osx  CodeCov doesn't support it so it's non tested now.
+
+matrix:
+  fast_finish: false
+  include:
+  - rust: nightly
+
+addons:
+  apt:
+    packages:
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - cmake
+      - gcc
+      - binutils-dev
+
+# Update nightly and set it for all of the directories.
+before_script:
+  - rustup update nightly
+  - rustup override set nightly
+
+
+# Main build
+script:
+  # Run tests/builds
+  - cargo check
+  - cargo build --release --verbose --all
+  - cargo test --verbose --all
+
+
+# Send a notification to the Dusk build Status Telegram channel once the CI build completes
+after_script:
+  - bash <(curl -s https://raw.githubusercontent.com/dusk-network/tools/master/bash/telegram_ci_notifications.sh)
