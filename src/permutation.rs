@@ -22,7 +22,7 @@ pub struct Permutation {
 impl Default for Permutation {
     fn default() -> Self {
         let width = 9;
-        let full_founds = 8;
+        let full_founds = 4;
         let partial_rounds = 59;
         Permutation {
             t: width,
@@ -37,12 +37,12 @@ impl Default for Permutation {
 }
 
 impl Permutation {
-    pub fn new(t: usize, full_rounds: usize, partial_rounds: usize) -> Result<Self, PermError> {
-        if full_rounds % 2 != 0 {
-            return Err(PermError::FullRoundsOdd);
-        }
-
-        let perm = Permutation {
+    // `full_rounds` input aims to be the number of full rounds that will be done
+    // before the partial rounds AND (BUT NOT ADDED TO) the number of full rounds 
+    // that will be done after the partial rounds.
+    pub fn new(t: usize, full_rounds: usize, partial_rounds: usize) -> Self {
+        
+        Permutation {
             t: t,
             full_rounds: full_rounds,
             partial_rounds: partial_rounds,
@@ -50,9 +50,7 @@ impl Permutation {
             data_lc: Vec::with_capacity(t),
             constants: RoundConstants::generate(full_rounds, partial_rounds, t),
             matrix: MDSMatrix::generate(t),
-        };
-
-        Ok(perm)
+        }
     }
 }
 
@@ -125,7 +123,7 @@ impl Permutation {
         let mut new_words: Vec<Scalar> = self.data.clone();
 
         // Apply R_f full rounds
-        for _ in 0..self.full_rounds / 2 {
+        for _ in 0..self.full_rounds {
             new_words = self.apply_full_round(&mut constants_iter, new_words)?;
         }
 
@@ -135,7 +133,7 @@ impl Permutation {
         }
 
         // Apply R_f full rounds
-        for _ in 0..self.full_rounds / 2 {
+        for _ in 0..self.full_rounds {
             new_words = self.apply_full_round(&mut constants_iter, new_words)?;
         }
 
