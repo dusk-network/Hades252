@@ -167,7 +167,7 @@ impl Permutation {
         }
 
         // Apply R_f full rounds
-        for _ in 0..fulll_rounds_iter / 2{
+        for _ in 0..fulll_rounds_iter{
             new_words = self.constrain_apply_full_round(&mut constants_iter, new_words, cs)?;
             new_words = new_words.into_iter().map(|word| word.simplify()).collect();
         }
