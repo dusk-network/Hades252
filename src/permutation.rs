@@ -152,7 +152,7 @@ impl Permutation {
         let mut new_words = self.data_lc.clone();
 
         // Apply R_f full rounds
-        for _ in 0..self.full_rounds / 2 {
+        for _ in 0..self.full_rounds {
             new_words = self.constrain_apply_full_round(&mut constants_iter, new_words, cs)?;
             new_words = new_words.into_iter().map(|word| word.simplify()).collect();
         }
@@ -164,7 +164,7 @@ impl Permutation {
         }
 
         // Apply R_f full rounds
-        for _ in 0..self.full_rounds / 2 {
+        for _ in 0..self.full_rounds {
             new_words = self.constrain_apply_full_round(&mut constants_iter, new_words, cs)?;
             new_words = new_words.into_iter().map(|word| word.simplify()).collect();
         }
