@@ -7,7 +7,7 @@ use sha2::Sha512;
 
 pub struct Permutation {
     t: usize,
-    full_rounds: usize,
+    total_full_rounds: usize,
     partial_rounds: usize,
 
     // data to be used in the solid instantiation of the permutation struct
@@ -22,37 +22,34 @@ pub struct Permutation {
 impl Default for Permutation {
     fn default() -> Self {
         let width = 9;
-        let full_founds = 8;
+        let total_full_founds = 8;
         let partial_rounds = 59;
         Permutation {
             t: width,
-            full_rounds: full_founds,
+            total_full_rounds: total_full_founds,
             partial_rounds: partial_rounds,
             data: Vec::with_capacity(width),
             data_lc: Vec::with_capacity(width),
-            constants: RoundConstants::generate(full_founds, partial_rounds, width),
+            constants: RoundConstants::generate(total_full_founds, partial_rounds, width),
             matrix: MDSMatrix::generate(width),
         }
     }
 }
 
 impl Permutation {
-    pub fn new(t: usize, full_rounds: usize, partial_rounds: usize) -> Result<Self, PermError> {
-        if full_rounds % 2 != 0 {
-            return Err(PermError::FullRoundsOdd);
-        }
+    #[allow(non_snake_case)]
+    pub fn new(t: usize, R_f: usize, R_p: usize) -> Self {
+        let total_full_rounds = 2 * R_f;
 
-        let perm = Permutation {
+        Permutation {
             t: t,
-            full_rounds: full_rounds,
-            partial_rounds: partial_rounds,
+            total_full_rounds: total_full_rounds,
+            partial_rounds: R_p,
             data: Vec::with_capacity(t),
             data_lc: Vec::with_capacity(t),
-            constants: RoundConstants::generate(full_rounds, partial_rounds, t),
+            constants: RoundConstants::generate(total_full_rounds, R_p, t),
             matrix: MDSMatrix::generate(t),
-        };
-
-        Ok(perm)
+        }
     }
 }
 
@@ -125,7 +122,7 @@ impl Permutation {
         let mut new_words: Vec<Scalar> = self.data.clone();
 
         // Apply R_f full rounds
-        for _ in 0..self.full_rounds / 2 {
+        for _ in 0..self.total_full_rounds / 2 {
             new_words = self.apply_full_round(&mut constants_iter, new_words)?;
         }
 
@@ -135,7 +132,7 @@ impl Permutation {
         }
 
         // Apply R_f full rounds
-        for _ in 0..self.full_rounds / 2 {
+        for _ in 0..self.total_full_rounds / 2 {
             new_words = self.apply_full_round(&mut constants_iter, new_words)?;
         }
 
@@ -154,7 +151,7 @@ impl Permutation {
         let mut new_words = self.data_lc.clone();
 
         // Apply R_f full rounds
-        for _ in 0..self.full_rounds / 2 {
+        for _ in 0..self.total_full_rounds / 2{
             new_words = self.constrain_apply_full_round(&mut constants_iter, new_words, cs)?;
             new_words = new_words.into_iter().map(|word| word.simplify()).collect();
         }
@@ -166,7 +163,7 @@ impl Permutation {
         }
 
         // Apply R_f full rounds
-        for _ in 0..self.full_rounds / 2 {
+        for _ in 0..self.total_full_rounds / 2{
             new_words = self.constrain_apply_full_round(&mut constants_iter, new_words, cs)?;
             new_words = new_words.into_iter().map(|word| word.simplify()).collect();
         }
