@@ -26,11 +26,11 @@ impl Default for Permutation {
         let partial_rounds = 59;
         Permutation {
             t: width,
-            full_rounds: full_founds,
+            full_rounds: total_full_founds,
             partial_rounds: partial_rounds,
             data: Vec::with_capacity(width),
             data_lc: Vec::with_capacity(width),
-            constants: RoundConstants::generate(full_founds, partial_rounds, width),
+            constants: RoundConstants::generate(total_full_founds, partial_rounds, width),
             matrix: MDSMatrix::generate(width),
         }
     }
