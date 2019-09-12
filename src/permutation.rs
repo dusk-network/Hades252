@@ -1,7 +1,7 @@
 use crate::errors::PermError;
 use crate::mds_matrix::*;
 use crate::round_constants::*;
-use bulletproofs::r1cs::{ConstraintSystem, LinearCombination, Variable};
+use bulletproofs::r1cs::{ConstraintSystem, LinearCombination};
 use curve25519_dalek::scalar::Scalar;
 use sha2::Sha512;
 
@@ -151,7 +151,7 @@ impl Permutation {
         let mut new_words = self.data_lc.clone();
 
         // Apply R_f full rounds
-        for _ in 0..self.total_full_rounds / 2{
+        for _ in 0..self.total_full_rounds / 2 {
             new_words = self.constrain_apply_full_round(&mut constants_iter, new_words, cs)?;
             new_words = new_words.into_iter().map(|word| word.simplify()).collect();
         }
@@ -163,7 +163,7 @@ impl Permutation {
         }
 
         // Apply R_f full rounds
-        for _ in 0..self.total_full_rounds / 2{
+        for _ in 0..self.total_full_rounds / 2 {
             new_words = self.constrain_apply_full_round(&mut constants_iter, new_words, cs)?;
             new_words = new_words.into_iter().map(|word| word.simplify()).collect();
         }
