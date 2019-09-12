@@ -94,7 +94,10 @@ fn verify_proof(
     let mut verifier_transcript = Transcript::new(b"");
     let mut verifier = Verifier::new(&mut verifier_transcript);
 
-    let vars: Vec<_> = commitments.iter().map(|v_point| verifier.commit(*v_point)).collect();;
+    let vars: Vec<_> = commitments
+        .iter()
+        .map(|v_point| verifier.commit(*v_point))
+        .collect();;
 
     // Convert variables into linear combinations
     let lcs: Vec<LinearCombination> = vars.iter().map(|&x| x.into()).collect();

@@ -1,6 +1,6 @@
 use crate::errors::PermError;
 use crate::permutation::Permutation;
-use bulletproofs::r1cs::{ConstraintSystem, LinearCombination, Variable};
+use bulletproofs::r1cs::{ConstraintSystem, LinearCombination};
 use curve25519_dalek::scalar::Scalar;
 
 // hash is a thin layer over the permutation struct
@@ -22,6 +22,7 @@ impl Hash {
     pub fn data(&self) -> Vec<Scalar> {
         self.perm.data.clone()
     }
+
     pub fn reset(&mut self) {
         self.perm.reset();
         self.perm.data.push(Scalar::zero());
@@ -31,15 +32,19 @@ impl Hash {
     pub fn input(&mut self, s: Scalar) -> Result<(), PermError> {
         self.perm.input(s)
     }
+
     pub fn input_bytes(&mut self, bytes: &[u8]) -> Result<(), PermError> {
         self.perm.input_bytes(bytes)
     }
+
     pub fn inputs(&mut self, scalars: Vec<Scalar>) -> Result<(), PermError> {
         self.perm.inputs(scalars)
     }
+
     pub fn input_lc(&mut self, lc: LinearCombination) -> Result<(), PermError> {
         self.perm.input_lc(lc)
     }
+
     pub fn result(&mut self) -> Option<Scalar> {
         // Apply permutation
         let words = self.perm.result().ok();
