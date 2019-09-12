@@ -14,6 +14,7 @@ impl MDSMatrix {
             matrix: MDSMatrix::with_offset(t, offset),
         }
     }
+
     /// generates a `t` by `t` MDS matrix with elements in GF(p)  
     /// Note that this will not match any reference implementation because
     /// curve25519 uses Little-Endian format, while other implementations use big-Endian
@@ -47,6 +48,7 @@ impl MDSMatrix {
         }
         matrix
     }
+
     // Matrix-Vector multiplication; multiply the MDS matrix by the given vector
     pub fn mul_vector(&self, b: &[Scalar]) -> Vec<Scalar> {
         self.matrix.iter().map(|row| dot_product(row, b)).collect()
@@ -80,8 +82,8 @@ fn constrain_dot_product(a: &[Scalar], b: Vec<LinearCombination>) -> LinearCombi
     sum.simplify()
 }
 
+#[cfg(test)]
 mod test {
-
     use super::*;
 
     #[test]
