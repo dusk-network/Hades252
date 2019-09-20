@@ -80,8 +80,8 @@ impl<'a> Iterator for RoundConstantsIterator<'a> {
     }
 }
 
+#[cfg(test)]
 mod test {
-
     use super::*;
 
     #[test]
