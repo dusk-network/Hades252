@@ -51,6 +51,14 @@ impl Permutation {
             matrix: MDSMatrix::generate(t),
         }
     }
+
+    pub fn constants(&self) -> &RoundConstants {
+        &self.constants
+    }
+
+    pub fn matrix(&self) -> &MDSMatrix {
+        &self.matrix
+    }
 }
 
 // Utility methods on the permutation struct

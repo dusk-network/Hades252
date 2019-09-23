@@ -15,6 +15,10 @@ impl MDSMatrix {
         }
     }
 
+    pub fn matrix(&self) -> &Vec<Vec<Scalar>> {
+        &self.matrix
+    }
+
     /// generates a `t` by `t` MDS matrix with elements in GF(p)  
     /// Note that this will not match any reference implementation because
     /// curve25519 uses Little-Endian format, while other implementations use big-Endian
