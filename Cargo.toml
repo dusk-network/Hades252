@@ -17,7 +17,6 @@ git = "https://github.com/dusk-network/bulletproofs"
 branch = "develop"
 features = ["yoloproofs"]
 
-
 [dev-dependencies]
 criterion = "0.3"
 
