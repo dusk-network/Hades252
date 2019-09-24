@@ -93,6 +93,7 @@ fn verify_proof(
     // Verify results
     let mut verifier_transcript = Transcript::new(b"");
     let mut verifier = Verifier::new(&mut verifier_transcript);
+    let mut rng = rand::thread_rng();
 
     let vars: Vec<_> = commitments
         .iter()
@@ -105,7 +106,7 @@ fn verify_proof(
     // Add preimage gadget
     preimage_chain_gadget(lcs[0].clone(), x.into(), z.into(), d.into(), &mut verifier).unwrap();
 
-    verifier.verify(&proof, &pc_gens, &bp_gens)
+    verifier.verify(&proof, &pc_gens, &bp_gens, &mut rng)
 }
 
 fn preimage_chain_gadget(

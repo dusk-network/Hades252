@@ -13,7 +13,7 @@ use bulletproofs::r1cs::{LinearCombination, R1CSError, R1CSProof, Variable};
 use curve25519_dalek::scalar::Scalar;
 
 type ProofResult<T> = Result<T, R1CSError>;
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 pub fn prove(
     d: Scalar,
     k: Scalar,
@@ -97,6 +97,7 @@ pub fn verify(
 
     let pc_gens = PedersenGens::default();
     let bp_gens = BulletproofGens::new(4096, 1);
+    let mut rng = rand::thread_rng();
 
     // Verifier logic
 
@@ -134,7 +135,7 @@ pub fn verify(
 
     // 4. Verify the proof
     let res = verifier
-        .verify(&proof, &pc_gens, &bp_gens)
+        .verify(&proof, &pc_gens, &bp_gens,&mut rng)
         .map_err(|_| R1CSError::VerificationError);
 
     let end = start.elapsed();
