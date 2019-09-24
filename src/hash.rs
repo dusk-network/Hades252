@@ -67,16 +67,9 @@ impl Hash {
 #[cfg(test)]
 mod test {
     use super::*;
-    use hex::encode;
 
     extern crate test;
     use test::Bencher;
-
-    use bulletproofs::r1cs::{Prover, R1CSProof, Verifier};
-    use bulletproofs::{BulletproofGens, PedersenGens};
-    use curve25519_dalek::ristretto::CompressedRistretto;
-    use curve25519_dalek::scalar::Scalar;
-    use merlin::Transcript;
 
     #[test]
     fn test_hash_reset() {
