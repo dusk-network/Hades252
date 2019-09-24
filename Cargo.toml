@@ -14,3 +14,10 @@ rand = "0.6"
 [dependencies.bulletproofs]
 path = "./bulletproofs"
 features = ["yoloproofs"]
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "poseidon_benchmarks"
+harness = false
