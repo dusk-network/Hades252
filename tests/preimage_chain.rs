@@ -2,7 +2,6 @@
 
 extern crate hades252;
 use hades252::errors::PermError;
-use hades252::hash::Hash;
 
 use bulletproofs::r1cs::{
     ConstraintSystem, LinearCombination, Prover, R1CSError, R1CSProof, Verifier,
@@ -27,7 +26,7 @@ fn test_preimage_chain() {
     let pc_gens = PedersenGens::default();
     let bp_gens = BulletproofGens::new(4096, 1);
 
-    let input = Scalar::from(21 as u64);
+    let input = Scalar::from(21_u64);
     // Prover makes proof
     // Proof claims that the prover knows the pre-image to the digest produced from the poseidon hash function
     let (proof, commitments, x, d, z) = make_proof(&pc_gens, &bp_gens, input).unwrap();
@@ -41,22 +40,22 @@ fn make_proof(
     bp_gens: &BulletproofGens,
     y: Scalar,
 ) -> Result<(R1CSProof, Vec<CompressedRistretto>, Scalar, Scalar, Scalar), PermError> {
-    let mut h = Hash::new();
+    use hades252::scalar::{hash, Permutation};
 
+    let mut perm = Permutation::new();
     // x = H(y)
-    h.input(y)?;
-    let x = h.result().unwrap();
-    h.reset();
+    perm.input(y)?;
+    let x = hash(perm).unwrap();
 
+    let mut perm = Permutation::new();
     // z = H(x)
-    h.input(x)?;
-    let z = h.result().unwrap();
-    h.reset();
+    perm.input(x)?;
+    let z = hash(perm).unwrap();
 
+    let mut perm = Permutation::new();
     // d = H(z)
-    h.input(z)?;
-    let d = h.result().unwrap();
-    h.reset();
+    perm.input(z)?;
+    let d = hash(perm).unwrap();
 
     // Setup Prover
     let mut prover_transcript = Transcript::new(b"");
@@ -116,25 +115,24 @@ fn preimage_chain_gadget(
     d_lc: LinearCombination,
     cs: &mut dyn ConstraintSystem,
 ) -> Result<(), PermError> {
-    let mut h = Hash::new();
+    use hades252::linear_combination::{hash, Permutation};
 
+    let mut perm = Permutation::new(cs);
     // x = H(y)
-    h.input_lc(pre_image_y)?;
-    let x = h.result_gadget(cs).unwrap();
+    perm.input(pre_image_y)?;
+    let x = hash(perm).unwrap();
     cs.constrain(x_lc - x.clone());
 
-    h.reset();
-
+    let mut perm = Permutation::new(cs);
     // z = H(x)
-    h.input_lc(x)?;
-    let z = h.result_gadget(cs).unwrap();
+    perm.input(x)?;
+    let z = hash(perm).unwrap();
     cs.constrain(z_lc - z.clone());
 
-    h.reset();
-
+    let mut perm = Permutation::new(cs);
     // d = H(z)
-    h.input_lc(z)?;
-    let d = h.result_gadget(cs).unwrap();
+    perm.input(z)?;
+    let d = hash(perm).unwrap();
     cs.constrain(d - d_lc);
 
     Ok(())
