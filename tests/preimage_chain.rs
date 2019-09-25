@@ -2,6 +2,7 @@
 
 extern crate hades252;
 use hades252::errors::PermError;
+use hades252::scalar;
 
 use bulletproofs::r1cs::{
     ConstraintSystem, LinearCombination, Prover, R1CSError, R1CSProof, Verifier,
@@ -40,22 +41,14 @@ fn make_proof(
     bp_gens: &BulletproofGens,
     y: Scalar,
 ) -> Result<(R1CSProof, Vec<CompressedRistretto>, Scalar, Scalar, Scalar), PermError> {
-    use hades252::scalar::{hash, Permutation};
-
-    let mut perm = Permutation::new();
     // x = H(y)
-    perm.input(y)?;
-    let x = hash(perm).unwrap();
+    let x = scalar::hash(&[y])?;
 
-    let mut perm = Permutation::new();
     // z = H(x)
-    perm.input(x)?;
-    let z = hash(perm).unwrap();
+    let z = scalar::hash(&[x])?;
 
-    let mut perm = Permutation::new();
     // d = H(z)
-    perm.input(z)?;
-    let d = hash(perm).unwrap();
+    let d = scalar::hash(&[z])?;
 
     // Setup Prover
     let mut prover_transcript = Transcript::new(b"");
@@ -115,24 +108,18 @@ fn preimage_chain_gadget(
     d_lc: LinearCombination,
     cs: &mut dyn ConstraintSystem,
 ) -> Result<(), PermError> {
-    use hades252::linear_combination::{hash, Permutation};
+    use hades252::linear_combination::hash;
 
-    let mut perm = Permutation::new(cs);
     // x = H(y)
-    perm.input(pre_image_y)?;
-    let x = hash(perm).unwrap();
+    let x = hash(cs, &[pre_image_y]).unwrap();
     cs.constrain(x_lc - x.clone());
 
-    let mut perm = Permutation::new(cs);
     // z = H(x)
-    perm.input(x)?;
-    let z = hash(perm).unwrap();
+    let z = hash(cs, &[x]).unwrap();
     cs.constrain(z_lc - z.clone());
 
-    let mut perm = Permutation::new(cs);
     // d = H(z)
-    perm.input(z)?;
-    let d = hash(perm).unwrap();
+    let d = hash(cs, &[z]).unwrap();
     cs.constrain(d - d_lc);
 
     Ok(())
