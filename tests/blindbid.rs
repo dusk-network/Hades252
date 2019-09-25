@@ -1,7 +1,6 @@
 #![feature(test)]
 
 extern crate hades252;
-use hades252::hash::Hash;
 
 use bulletproofs::r1cs::{ConstraintSystem, Prover, Verifier};
 use bulletproofs::{BulletproofGens, PedersenGens};
@@ -13,7 +12,7 @@ use bulletproofs::r1cs::{LinearCombination, R1CSError, R1CSProof, Variable};
 use curve25519_dalek::scalar::Scalar;
 
 type ProofResult<T> = Result<T, R1CSError>;
-use std::time::{Instant};
+use std::time::Instant;
 pub fn prove(
     d: Scalar,
     k: Scalar,
@@ -23,7 +22,6 @@ pub fn prove(
     seed: Scalar,
     pub_list: Vec<Scalar>,
     toggle: usize,
-    hash: &mut Hash,
 ) -> ProofResult<(
     R1CSProof,
     Vec<CompressedRistretto>,
@@ -71,7 +69,6 @@ pub fn prove(
         seed.into(),
         t_v,
         l_v,
-        hash,
     );
 
     // 4. Make a proof
@@ -91,10 +88,7 @@ pub fn verify(
     pub_list: Vec<Scalar>,
     q: Scalar,
     z_img: Scalar,
-    hash: &mut Hash,
 ) -> ProofResult<()> {
-    hash.reset();
-
     let pc_gens = PedersenGens::default();
     let bp_gens = BulletproofGens::new(4096, 1);
     let mut rng = rand::thread_rng();
@@ -130,12 +124,11 @@ pub fn verify(
         seed.into(),
         t_c_v,
         l_v,
-        hash,
     );
 
     // 4. Verify the proof
     let res = verifier
-        .verify(&proof, &pc_gens, &bp_gens,&mut rng)
+        .verify(&proof, &pc_gens, &bp_gens, &mut rng)
         .map_err(|_| R1CSError::VerificationError);
 
     let end = start.elapsed();
@@ -154,37 +147,34 @@ pub fn proof_gadget<CS: ConstraintSystem>(
     seed: LinearCombination,
     toggle: Vec<Variable>, // private: binary list indicating private number is somewhere in list
     items: Vec<LinearCombination>, // public list
-    hades: &mut Hash,
 ) {
-    // m = h(k)
-    hades.input_lc(k).unwrap();
-    let m = hades.result_gadget(cs).unwrap();
+    use hades252::linear_combination::{hash, Permutation};
 
-    // // reset hash
-    hades.reset();
+    let mut perm = Permutation::new(cs);
+    // m = h(k)
+    perm.input(k).unwrap();
+    let m = hash(perm).unwrap();
 
     // x = h(d, m)
-    hades.input_lc(d.clone()).unwrap();
-    hades.input_lc(m.clone()).unwrap();
-    let x = hades.result_gadget(cs).unwrap();
+    let mut perm = Permutation::new(cs);
+    perm.input(d.clone()).unwrap();
+    perm.input(m.clone()).unwrap();
 
-    // // reset hash
-    hades.reset();
+    let x = hash(perm).unwrap();
 
     one_of_many_gadget(cs, x.clone(), toggle, items);
 
+    let mut perm = Permutation::new(cs);
     // y = h(seed, x)
-    hades.input_lc(seed.clone()).unwrap();
-    hades.input_lc(x).unwrap();
-    let y = hades.result_gadget(cs).unwrap();
+    perm.input(seed.clone()).unwrap();
+    perm.input(x).unwrap();
+    let y = hash(perm).unwrap();
 
-    // // reset hash
-    hades.reset();
-
+    let mut perm = Permutation::new(cs);
     // z = h(seed, m)
-    hades.input_lc(seed).unwrap();
-    hades.input_lc(m).unwrap();
-    let z = hades.result_gadget(cs).unwrap();
+    perm.input(seed).unwrap();
+    perm.input(m).unwrap();
+    let z = hash(perm).unwrap();
 
     cs.constrain(z_img.clone() - z);
 
@@ -269,8 +259,6 @@ use rand::RngCore;
 
 #[test]
 fn test_prove_verify() {
-    let mut hash = Hash::new();
-
     let mut csprng: OsRng = OsRng::new().unwrap();
 
     let k: Scalar = Scalar::random(&mut csprng);
@@ -300,35 +288,45 @@ fn test_prove_verify() {
         seed,
         bid_list.clone(),
         secret_bid_position,
-        &mut hash,
     )
     .unwrap();
 
-    verify(proof, commitments, t_c, seed, bid_list, q, z_img, &mut hash).unwrap();
+    verify(proof, commitments, t_c, seed, bid_list, q, z_img).unwrap();
 }
 
 fn calc_x(d: Scalar, m: Scalar) -> Scalar {
-    let mut hades = Hash::new();
-    hades.inputs(vec![d, m]).unwrap();
-    hades.result().unwrap()
+    use hades252::scalar::{hash, Permutation};
+
+    let mut perm = Permutation::new();
+    perm.input(d).unwrap();
+    perm.input(m).unwrap();
+    hash(perm).unwrap()
 }
 
 fn calc_y(seed: Scalar, x: Scalar) -> Scalar {
-    let mut hades = Hash::new();
-    hades.inputs(vec![seed, x]).unwrap();
-    hades.result().unwrap()
+    use hades252::scalar::{hash, Permutation};
+
+    let mut perm = Permutation::new();
+    perm.input(seed).unwrap();
+    perm.input(x).unwrap();
+    hash(perm).unwrap()
 }
 
 fn calc_m(k: Scalar) -> Scalar {
-    let mut hades = Hash::new();
-    hades.input(k).unwrap();
-    hades.result().unwrap()
+    use hades252::scalar::{hash, Permutation};
+
+    let mut perm = Permutation::new();
+    perm.input(k).unwrap();
+    hash(perm).unwrap()
 }
 
 fn calc_z(seed: Scalar, m: Scalar) -> Scalar {
-    let mut hades = Hash::new();
-    hades.inputs(vec![seed, m]).unwrap();
-    hades.result().unwrap()
+    use hades252::scalar::{hash, Permutation};
+
+    let mut perm = Permutation::new();
+    perm.input(seed).unwrap();
+    perm.input(m).unwrap();
+    hash(perm).unwrap()
 }
 
 fn rand_bid_list(size: usize, secret_bid: Scalar, insert_at: usize) -> Vec<Scalar> {
