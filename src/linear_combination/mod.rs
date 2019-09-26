@@ -115,7 +115,7 @@ pub fn hash(
   let words_slice = &mut words[1..1 + data.len()];
 
   words_slice.clone_from_slice(data);
-  words_slice[0] = first_item;
+  words[0] = first_item;
 
   let words = perm(cs, words)?;
   Ok(words[1].clone())
