@@ -7,43 +7,34 @@ use criterion::Criterion;
 use hades252::hash::Hash;
 use curve25519_dalek::scalar::Scalar;
 
+/// Since we can only bench a single function, we make a function
+/// that instantiates the hash, inputs the vec of `Scalar` and then
+/// calls `result()`.
+fn inst_plus_digest() -> () {
+    let mut hasher = Hash::new();
+    let input = vec![Scalar::one(); 7];
+    hasher.inputs(input).unwrap();
+    hasher.result();
+}
+
 pub fn hasher_creation(c: &mut Criterion) {
     c.bench_function("Non-optimized hasher creation", |b| b.iter(|| Hash::new()));
 }
 
-pub fn hasher_scalar_round(c: &mut Criterion) {
+/// Since this implementation, needs to instanciate the hasher,
+/// we need to bench a function that does it. 
+/// Thats why we bench `inst_plus_digest`.
+pub fn hash_scalar_vec(c: &mut Criterion) {
     let mut hasher = Hash::new();
     hasher.input(Scalar::one()).unwrap();
 
     c.bench_function("Non-optimized single Scalar hash", |b| b.iter(|| 
-        hasher.result())
+        inst_plus_digest())
     );
 }
 
-pub fn hasher_vec_round(c: &mut Criterion) {
-    let mut hasher = Hash::new(); 
-    let vec_inp = vec!(Scalar::one(), Scalar::one(), Scalar::one(), Scalar::one(), Scalar::one());
-    hasher.inputs(vec_inp).unwrap();
-
-    c.bench_function("Non-optimized single Scalar hash", |b| b.iter(|| 
-        hasher.result())
-    );
-}
-
-pub fn hasher_slice_round(c: &mut Criterion) {
-    let mut hasher = Hash::new(); 
-    let slice: [u8; 32] = [194, 24, 45, 158, 220, 161, 164, 1, 231, 42, 46, 200, 184, 98, 31, 166, 153, 153, 153, 153, 153, 153, 153, 153, 153, 153, 153, 153, 153, 153, 153, 9];
-    hasher.input_bytes(&slice).unwrap();
-
-    c.bench_function("Non-optimized single Scalar hash", |b| b.iter(|| 
-        hasher.result())
-    );
-}
-
-
-criterion_group!(benches, hasher_creation, 
-    hasher_scalar_round, 
-    hasher_vec_round,
-    hasher_slice_round,
+criterion_group!(benches, 
+    hasher_creation, 
+    hash_scalar_vec
 );
 criterion_main!(benches);
