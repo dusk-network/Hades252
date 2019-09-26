@@ -2,6 +2,7 @@ use crate::errors::PermError;
 use crate::mds_matrix::MDS_MATRIX;
 use crate::round_constants::ROUND_CONSTANTS;
 use curve25519_dalek::scalar::Scalar;
+use num::pow;
 
 const TOTAL_FULL_ROUNDS: usize = 8;
 const PARTIAL_ROUNDS: usize = 59;
@@ -86,9 +87,15 @@ pub fn hash(data: &[Scalar]) -> Result<Scalar, PermError> {
     return Err(PermError::InputFull);
   }
 
+  // The base type declares the output type, so we use u64
+  // since the arity of the merkle tree is not likely to be
+  // >= 2^64.
+  let first_item = Scalar::from(pow(2u64, width) - 1);
+
   let mut words = vec![Scalar::zero(); width];
   let words_slice = &mut words[1..1 + data.len()];
 
+  words_slice[0] = first_item;
   words_slice.copy_from_slice(data);
 
   let words = perm(words)?;
