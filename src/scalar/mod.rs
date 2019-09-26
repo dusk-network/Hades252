@@ -94,8 +94,9 @@ pub fn hash(data: &[Scalar]) -> Result<Scalar, PermError> {
   let mut words = vec![Scalar::zero(); width];
   let words_slice = &mut words[1..1 + data.len()];
 
-  words_slice[0] = first_item;
-  words_slice.copy_from_slice(data);
+  words_slice.copy_from_slice(data);  
+  words[0] = first_item;
+
 
   let words = perm(words)?;
   Ok(words[1])
