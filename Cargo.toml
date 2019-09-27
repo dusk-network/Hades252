@@ -1,7 +1,10 @@
 [package]
 name = "hades252"
-version = "0.1.0"
-authors = ["kev <kevtheappdev@gmail.com>"]
+version = "0.1.1"
+authors = [
+  "kev <kevtheappdev@gmail.com>", "zer0 <matteo@dusk.network>",
+  "Victor Lopes <victor@dusk.network>", "kr0 <c.perezbaro@gmail.com>"
+]
 edition = "2018"
 
 [dependencies]
@@ -35,4 +38,3 @@ panic = 'abort'
 lto = true
 incremental = false
 codegen-units = 1
-# rustflags = "-C target_feature=+avx2"
