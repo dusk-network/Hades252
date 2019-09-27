@@ -302,7 +302,7 @@ fn calc_z(seed: Scalar, m: Scalar) -> Scalar {
 fn rand_bid_list(size: usize, secret_bid: Scalar, insert_at: usize) -> Vec<Scalar> {
 	assert!(insert_at < size);
 
-	let mut csprng = OsRng::new().unwrap();;
+	let mut csprng = OsRng::new().unwrap();
 
 	let mut bid_list: Vec<Scalar> = Vec::with_capacity(size);
 	for i in 0..size {

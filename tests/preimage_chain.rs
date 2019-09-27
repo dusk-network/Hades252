@@ -90,7 +90,7 @@ fn verify_proof(
     let vars: Vec<_> = commitments
         .iter()
         .map(|v_point| verifier.commit(*v_point))
-        .collect();;
+        .collect();
 
     // Convert variables into linear combinations
     let lcs: Vec<LinearCombination> = vars.iter().map(|&x| x.into()).collect();
