@@ -2,7 +2,7 @@
 
 extern crate hades252;
 use hades252::errors::PermError;
-use hades252::hash::Hash;
+use hades252::scalar;
 
 use bulletproofs::r1cs::{
     ConstraintSystem, LinearCombination, Prover, R1CSError, R1CSProof, Verifier,
@@ -27,7 +27,7 @@ fn test_preimage_chain() {
     let pc_gens = PedersenGens::default();
     let bp_gens = BulletproofGens::new(4096, 1);
 
-    let input = Scalar::from(21 as u64);
+    let input = Scalar::from(21_u64);
     // Prover makes proof
     // Proof claims that the prover knows the pre-image to the digest produced from the poseidon hash function
     let (proof, commitments, x, d, z) = make_proof(&pc_gens, &bp_gens, input).unwrap();
@@ -41,22 +41,14 @@ fn make_proof(
     bp_gens: &BulletproofGens,
     y: Scalar,
 ) -> Result<(R1CSProof, Vec<CompressedRistretto>, Scalar, Scalar, Scalar), PermError> {
-    let mut h = Hash::new();
-
     // x = H(y)
-    h.input(y)?;
-    let x = h.result().unwrap();
-    h.reset();
+    let x = scalar::hash(&[y])?;
 
     // z = H(x)
-    h.input(x)?;
-    let z = h.result().unwrap();
-    h.reset();
+    let z = scalar::hash(&[x])?;
 
     // d = H(z)
-    h.input(z)?;
-    let d = h.result().unwrap();
-    h.reset();
+    let d = scalar::hash(&[z])?;
 
     // Setup Prover
     let mut prover_transcript = Transcript::new(b"");
@@ -93,11 +85,12 @@ fn verify_proof(
     // Verify results
     let mut verifier_transcript = Transcript::new(b"");
     let mut verifier = Verifier::new(&mut verifier_transcript);
+    let mut rng = rand::thread_rng();
 
     let vars: Vec<_> = commitments
         .iter()
         .map(|v_point| verifier.commit(*v_point))
-        .collect();;
+        .collect();
 
     // Convert variables into linear combinations
     let lcs: Vec<LinearCombination> = vars.iter().map(|&x| x.into()).collect();
@@ -105,7 +98,7 @@ fn verify_proof(
     // Add preimage gadget
     preimage_chain_gadget(lcs[0].clone(), x.into(), z.into(), d.into(), &mut verifier).unwrap();
 
-    verifier.verify(&proof, &pc_gens, &bp_gens)
+    verifier.verify(&proof, &pc_gens, &bp_gens, &mut rng)
 }
 
 fn preimage_chain_gadget(
@@ -115,25 +108,18 @@ fn preimage_chain_gadget(
     d_lc: LinearCombination,
     cs: &mut dyn ConstraintSystem,
 ) -> Result<(), PermError> {
-    let mut h = Hash::new();
+    use hades252::linear_combination::hash;
 
     // x = H(y)
-    h.input_lc(pre_image_y)?;
-    let x = h.result_gadget(cs).unwrap();
+    let x = hash(cs, &[pre_image_y]).unwrap();
     cs.constrain(x_lc - x.clone());
 
-    h.reset();
-
     // z = H(x)
-    h.input_lc(x)?;
-    let z = h.result_gadget(cs).unwrap();
+    let z = hash(cs, &[x]).unwrap();
     cs.constrain(z_lc - z.clone());
 
-    h.reset();
-
     // d = H(z)
-    h.input_lc(z)?;
-    let d = h.result_gadget(cs).unwrap();
+    let d = hash(cs, &[z]).unwrap();
     cs.constrain(d - d_lc);
 
     Ok(())
