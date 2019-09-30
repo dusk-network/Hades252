@@ -1,58 +1,54 @@
 #[macro_use]
 extern crate criterion;
-extern crate hades252;
 extern crate bulletproofs;
+extern crate hades252;
 
+use criterion::black_box;
 use criterion::Criterion;
-use hades252::hash::Hash;
-use curve25519_dalek::scalar::Scalar;
-use bulletproofs::r1cs::LinearCombination;
+use rand::thread_rng;
 
-/// This function allows us to bench the whole process of 
+use bulletproofs::r1cs::LinearCombination;
+use curve25519_dalek::scalar::Scalar;
+use hades252::hash::Hash;
+
+/// This function allows us to bench the whole process of
 /// digesting a vec of `Scalar`. Since the hasher instantiation
 /// time matters here, and is optimized or even non-existing on other
 /// implementations, that makes us bench the whole process instead of
 /// just benching the `hasher.result()` fn.
-fn inst_plus_digest() -> () {
+#[inline]
+fn digest_one() -> () {
     let mut hasher = Hash::new();
-    let input = vec![Scalar::one(); 7];
-    hasher.inputs(input).unwrap();
+    let s = Scalar::random(&mut thread_rng());
+    hasher.input(s).unwrap();
     hasher.result();
 }
 
-/// This function allows us to bench the whole process of 
-/// digesting a vec of `LinearCombination`. Since the hasher instantiation
-/// time matters here, and is optimized or even non-existing on other
-/// implementations, that makes us bench the whole process instead of
-/// just benching the `hasher.result()` fn.
-fn inst_plus_digest_lc() -> () {
+#[inline]
+fn digest(n: usize) -> () {
     let mut hasher = Hash::new();
-    let lc_one = LinearCombination::from(Scalar::one());
-    for _ in 0..7 {
-        hasher.input_lc(lc_one.clone()).unwrap();
-    }
+    let s: Vec<Scalar> = (0..n).map(|_| Scalar::random(&mut thread_rng())).collect();
+    hasher.inputs(s).unwrap();
     hasher.result();
 }
 
-pub fn hasher_creation(c: &mut Criterion) {
-    c.bench_function("Non-optimized hasher instantiation", |b| b.iter(|| Hash::new()));
+pub fn hash_one_scalar(c: &mut Criterion) {
+    c.bench_function("Hashing single `Scalar`", |b| b.iter(|| digest_one()));
 }
 
-pub fn hash_scalar_vec(c: &mut Criterion) {
-    c.bench_function("Non-optimized Instantiation + Vec<Scalar> hash", |b| b.iter(|| 
-        inst_plus_digest())
-    );
+pub fn hash_two_scalars(c: &mut Criterion) {
+    c.bench_function("Hashing two `Scalar`", |b| b.iter(|| digest(black_box(2))));
 }
 
-pub fn hash_lc_vec(c: &mut Criterion) {
-    c.bench_function("Non-optimized Instantiation + Vec<LinerCombination> hash", |b| b.iter(|| 
-        inst_plus_digest_lc())
-    );
+pub fn hash_four_scalars(c: &mut Criterion) {
+    c.bench_function("Hashing four `Scalar`", |b| b.iter(|| digest(black_box(4))));
 }
 
-criterion_group!(benches, 
-    hasher_creation, 
-    hash_scalar_vec,
-    hash_lc_vec
+criterion_group!(
+    benches,
+    hash_one_scalar,
+    hash_two_scalars,
+    hash_four_scalars
 );
+
 criterion_main!(benches);
