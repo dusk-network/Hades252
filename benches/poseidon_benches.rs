@@ -2,56 +2,50 @@
 extern crate criterion;
 extern crate hades252;
 
+use criterion::black_box;
 use criterion::Criterion;
+use rand::thread_rng;
 
-use curve25519_dalek::scalar::Scalar;
 use bulletproofs::r1cs::{LinearCombination, Verifier};
+use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
 
-use hades252::scalar;
 use hades252::linear_combination;
+use hades252::scalar;
 
-
-/// This function allows us to bench the whole process of 
+/// This function allows us to bench the whole process of
 /// digesting a vec of `Scalar`. We put together the process
 /// of creating the scalar array + digesting the info to be able
 /// to compare the results against the unoptimized version.
-fn inst_plus_digest() -> () {
-    let input = [Scalar::one(); 7];
-    scalar::hash(&input).unwrap();
+#[inline]
+fn digest_one() -> () {
+    let s = Scalar::random(&mut thread_rng());
+    scalar::hash(&[s]).unwrap();
 }
 
-/// This function allows us to bench the whole process of 
-/// digesting a vec of `LinearCombination`. We put together the process
-/// of creating the scalar array + digesting the info to be able
-/// to compare the results against the unoptimized version.
-fn inst_plus_digest_lc() -> () {
-    let inp = LinearCombination::from(Scalar::one());
-    let mut lc_one: Vec<LinearCombination> = vec![];
-    for _ in 0..7 {
-        lc_one.push(inp.clone());
-    };
-
-    let mut verifier_transcript = Transcript::new(b"");
-    let mut verifier = Verifier::new(&mut verifier_transcript);
-    linear_combination::hash(&mut verifier, &lc_one).unwrap();
+#[inline]
+fn digest(n: usize) -> () {
+    let s: Vec<Scalar> = (0..n).map(|_| Scalar::random(&mut thread_rng())).collect();
+    scalar::hash(&s).unwrap();
 }
 
-//----------------- Benches -----------------//
-pub fn hash_scalar_vec(c: &mut Criterion) {
-    c.bench_function("Optimized Instantiation + Vec<Scalar> hash", |b| b.iter(|| 
-        inst_plus_digest())
-    );
+pub fn hash_one_scalar(c: &mut Criterion) {
+    c.bench_function("Hashing single `Scalar`", |b| b.iter(|| digest_one()));
 }
 
-pub fn hash_lc_vec(c: &mut Criterion) {
-    c.bench_function("Optimized Instantiation + Vec<LinerCombination> hash", |b| b.iter(|| 
-        inst_plus_digest_lc())
-    );
+pub fn hash_two_scalars(c: &mut Criterion) {
+    c.bench_function("Hashing two `Scalar`", |b| b.iter(|| digest(black_box(2))));
 }
 
+pub fn hash_four_scalars(c: &mut Criterion) {
+    c.bench_function("Hashing four `Scalar`", |b| b.iter(|| digest(black_box(4))));
+}
 
-criterion_group!(benches,  
-    hash_scalar_vec
+criterion_group!(
+    benches,
+    hash_one_scalar,
+    hash_two_scalars,
+    hash_four_scalars
 );
+
 criterion_main!(benches);
