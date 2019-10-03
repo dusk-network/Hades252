@@ -57,8 +57,8 @@ mod lc_benches {
     fn digest_one() -> () {
         let s = LinearCombination::from(Scalar::random(&mut thread_rng()));
 
-        // The creation of the `Verifier` does not affect at the benchmark timings.
-        // It takes aproximately: `625.21 ns`.
+        // The `Verifier` instantiation is negligible, taking roughly 0.000001% 
+        // of the total benchmark time.
         let mut verifier_transcript = Transcript::new(b"");
         let mut verifier = Verifier::new(&mut verifier_transcript);
 
@@ -69,8 +69,8 @@ mod lc_benches {
     fn digest(n: usize) -> () {
         let s: Vec<LinearCombination> = (0..n).map(|_| LinearCombination::from(Scalar::random(&mut thread_rng()))).collect();
         
-        // The creation of the `Verifier` does not affect at the benchmark timings.
-        // It takes aproximately: `625.21 ns`.
+        // The `Verifier` instantiation is negligible, taking roughly 0.000001% 
+        // of the total benchmark time.
         let mut verifier_transcript = Transcript::new(b"");
         let mut verifier = Verifier::new(&mut verifier_transcript);
 
