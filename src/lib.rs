@@ -52,7 +52,7 @@
 //! let mut verifier = Verifier::new(&mut verifier_transcript);
 //! 
 //! // Hash the data and get the resulting `LinearCombination`.
-//! let digest_res = linear_combination::hash(&mut verifier, &lc_one).unwrap();
+//! let digest_res = hash(&mut verifier, &lc_one).unwrap();
 //! ```
 //! 
 //! ## Deviations

@@ -1,3 +1,10 @@
+//! This module contains an implementation of the `Poseidon252`
+//! hash algorithm specifically designed to work outside of
+//! Rank 1 Constraint Systems (R1CS).
+//! 
+//! The inputs of the hash function have to be explicitly
+//! over the Scalar Field of the curve25519 so working over
+//! `Fp = 2^252 + 27742317777372353535851937790883648493`.
 use crate::errors::PermError;
 use crate::mds_matrix::MDS_MATRIX;
 use crate::round_constants::ROUND_CONSTANTS;
