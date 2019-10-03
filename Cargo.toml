@@ -19,6 +19,11 @@ features = ["yoloproofs"]
 
 [dev-dependencies]
 rand = "0.6"
+criterion = "0.3"
+
+[[bench]]
+name = "poseidon_benches"
+harness = false
 
 [profile.dev]
 opt-level = 3
