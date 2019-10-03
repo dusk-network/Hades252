@@ -27,7 +27,7 @@ const PARTIAL_ROUNDS: usize = 59;
 /// - Applies twice the half of the `FULL_ROUNDS` 
 /// (which can be understood as linear ops).
 ///  
-/// - In the middle step it applies the `PARTIAL_ROUDS` 
+/// - In the middle step it applies the `PARTIAL_ROUNDS` 
 /// (which can be understood as non-linear ops).
 /// 
 /// This structure allows to minimize the number of non-linear
@@ -159,12 +159,13 @@ fn quintic_s_box(cs: &mut dyn ConstraintSystem, lc: LinearCombination) -> Linear
 /// Performs the Poseidon-252 hash algorithm over a set of inputs. 
 /// 
 /// In this implementation, apply the hash is the same as applying
-/// just one permutation over the inputs (padding and setting the 
-/// bitflags first) since the arity of the merkle tree is `9` 
-/// and we don't accept more than 8 inputs. 
+/// just one permutation over the inputs (padding and setting a 0 
+/// at the beginning of the input set) since the arity of 
+/// the merkle tree is `9` and we don't accept more than 8 inputs. 
 /// 
 /// # Returns
-/// - `Ok(LinearCombination)` if the number of inputs is lower than `8`. 
+/// - `Ok(LinearCombination)` if the number of inputs is lower than
+/// the arity of the Merkle tree. 
 /// - `Err` -> `PermError`: Which means that the ammount of inputs
 /// of the hash function exceeds the limit `8`.
 pub fn hash(

@@ -12,11 +12,12 @@
 //! 
 //! - width = 9
 //! 
-//! - Number of full rounds = 8 . There are four full rounds at the beginning and four full rounds at the end
+//! - Number of full rounds = 8 . There are four full rounds at the beginning and four full rounds at the end,
+//! where each full round has `WIDTH` quintic S-Boxes.
 //! 
 //! - Merkle tree arity : 8 to 1
 //! 
-//! - Number of partial rounds = 59, where each partial round has one quintic s-box and (width-1) identity functions.
+//! - Number of partial rounds = 59, where each partial round has one quintic S-Box and (width-1) identity functions.
 //! 
 //! - Number of round constants = 960
 //! 
