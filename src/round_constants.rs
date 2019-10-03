@@ -4,6 +4,11 @@ use curve25519_dalek::scalar::Scalar;
 use lazy_static::*;
 
 lazy_static! {
+  /// `ROUND_CONSTANTS` constists on a static reference
+  /// that points to the pre-loaded 960 Scalar constants.
+  /// 
+  /// This 960 `Scalar` constants are loaded from `ark.bin`
+  /// where all of the `Scalar` are represented in bytes.
   pub static ref ROUND_CONSTANTS: [Scalar; 960] = {
     let bytes = include_bytes!("ark.bin");
 
