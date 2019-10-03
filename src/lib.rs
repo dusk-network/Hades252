@@ -31,7 +31,7 @@
 //! // inputs as much.
 //! // If we use less, the function will take care of padding them
 //! // propperly.
-//! let input = [Scalar::one(); 8];
+//! let input = [Scalar::one(); 7];
 //! 
 //! // Hash the data and get the resulting `Scalar`.
 //! let digest_res = hash(&input).unwrap();
@@ -51,7 +51,7 @@
 //! // propperly.
 //! let inp = LinearCombination::from(Scalar::one());
 //! let mut lc_one: Vec<LinearCombination> = vec![];
-//! for _ in 0..8 {
+//! for _ in 0..7 {
 //!     lc_one.push(inp.clone());
 //! };
 //! 
