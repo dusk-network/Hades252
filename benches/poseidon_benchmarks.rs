@@ -61,6 +61,8 @@ mod lc_benches {
         let mut hasher = Hash::new();
         let s = LinearCombination::from(Scalar::random(&mut thread_rng()));
 
+        // The creation of the `Verifier` does not affect at the benchmark timings.
+        // It takes aproximately: `625.21 ns`.
         let mut verifier_transcript = Transcript::new(b"");
         let mut verifier = Verifier::new(&mut verifier_transcript);
 
@@ -76,6 +78,8 @@ mod lc_benches {
             hasher.input_lc(lc).unwrap()
         };
         
+        // The creation of the `Verifier` does not affect at the benchmark timings.
+        // It takes aproximately: `625.21 ns`.
         let mut verifier_transcript = Transcript::new(b"");
         let mut verifier = Verifier::new(&mut verifier_transcript);
 
