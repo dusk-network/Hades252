@@ -27,7 +27,7 @@ lazy_static! {
   };
 }
 
-/// Represents the product `row_vec * colum_vec` for the
+/// Represents the product `row_vec * column_vec` for the
 /// `Scalar` use case. 
 /// 
 /// This operation returns a Scalar as a result.
@@ -35,7 +35,7 @@ fn dot_product(a: &[Scalar], b: &[Scalar]) -> Scalar {
   a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
 }
 
-/// Represents the product `row_lc_vec * colum_scalar_vec` for the
+/// Represents the product `row_lc_vec * column_scalar_vec` for the
 /// `LinearCombination` use case. 
 /// 
 /// This operation returns a `simplified` `LinearCombination`
