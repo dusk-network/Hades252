@@ -3,7 +3,12 @@ use crate::mds_matrix::MDS_MATRIX;
 use crate::round_constants::ROUND_CONSTANTS;
 use curve25519_dalek::scalar::Scalar;
 
+/// Total ammount of full rounds that will be applied. 
+/// This is expressed as `RF` in the Poseidon paper.
 const TOTAL_FULL_ROUNDS: usize = 8;
+
+/// Total ammount of partial rounds that will be applied. 
+/// This is expressed as `Rp` in the Poseidon paper.
 const PARTIAL_ROUNDS: usize = 59;
 
 /// Applies a `permutation-round` of the `Poseidon252` hashing algorithm. 
@@ -48,7 +53,10 @@ fn perm(data: Vec<Scalar>) -> Result<Vec<Scalar>, PermError> {
   Ok(new_words)
 }
 
-/// A partial round has 3 steps on every iteration:
+/// Applies a `Partial Round` also known as a 
+/// `Partial S-Box layer` to a set of inputs. 
+/// 
+/// ### A partial round has 3 steps on every iteration:
 /// 
 /// - Add round keys to each word. Also known as `ARK`.
 /// - Apply `quintic S-Box` **just to the first element of 
@@ -72,6 +80,9 @@ where
   Ok(new_words * &MDS_MATRIX)
 }
 
+/// Applies a `Full Round` also known as a 
+/// `Full S-Box layer` to a set of inputs. 
+/// 
 /// A full round has 3 steps on every iteration:
 /// 
 /// - Add round keys to each word. Also known as `ARK`.
@@ -98,7 +109,7 @@ where
   Ok(quintic_words? * &MDS_MATRIX)
 }
 
-/// Add round keys to a set of `Scalar` which are the input. 
+/// Add round keys to a set of `Scalar`. 
 /// 
 /// This round key addition also known as `ARK` is used to
 /// reach `Confusion and Diffusion` properties for the algorithm.
@@ -122,7 +133,7 @@ where
 /// 
 /// The modulo depends on the input you use. In our case
 /// the modulo is done in respect of the `curve25519 scalar field`
-///  == `2^255 - 19`.
+///  == `2^252 + 27742317777372353535851937790883648493`.
 fn quintic_s_box(scalar: &Scalar) -> Scalar {
   scalar * scalar * scalar * scalar * scalar
 }
