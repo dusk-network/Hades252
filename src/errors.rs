@@ -7,6 +7,8 @@ pub enum PermError {
     // This is returned if an odd number of full rounds is specified. This implementation only supports
     // the symmetric Permutation variant.
     FullRoundsOdd,
+    // The provided input contains more elements than the allowed for the merkle tree.
+    MerkleWidthOverflow,
     // This error occurs when you try to invert a scalar which has the value of zero
     NonInvertible,
     // This errors occurs when a user tries to fetch a constant and the iterator function returns `None`

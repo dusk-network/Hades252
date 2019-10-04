@@ -1,5 +1,5 @@
 use crate::errors::PermError;
-use bulletproofs::r1cs::{ConstraintSystem, LinearCombination};
+use crate::linear_combination::{ConstraintSystem, LinearCombination};
 
 pub fn hash(
     _cs: &mut dyn ConstraintSystem,

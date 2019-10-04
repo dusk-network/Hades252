@@ -2,14 +2,13 @@
 
 extern crate hades252;
 use hades252::errors::PermError;
-use hades252::scalar;
+use hades252::scalar::{self, Scalar};
 
 use bulletproofs::r1cs::{
     ConstraintSystem, LinearCombination, Prover, R1CSError, R1CSProof, Verifier,
 };
 use bulletproofs::{BulletproofGens, PedersenGens};
 use curve25519_dalek::ristretto::CompressedRistretto;
-use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
 
 /*
@@ -42,13 +41,13 @@ fn make_proof(
     y: Scalar,
 ) -> Result<(R1CSProof, Vec<CompressedRistretto>, Scalar, Scalar, Scalar), PermError> {
     // x = H(y)
-    let x = scalar::hash(&[y])?;
+    let x = scalar::sponge::hash(&[y])?;
 
     // z = H(x)
-    let z = scalar::hash(&[x])?;
+    let z = scalar::sponge::hash(&[x])?;
 
     // d = H(z)
-    let d = scalar::hash(&[z])?;
+    let d = scalar::sponge::hash(&[z])?;
 
     // Setup Prover
     let mut prover_transcript = Transcript::new(b"");

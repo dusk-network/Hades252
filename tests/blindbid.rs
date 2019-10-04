@@ -1,15 +1,15 @@
 #![feature(test)]
 
 extern crate hades252;
-use bulletproofs::r1cs::{ConstraintSystem, Prover, Verifier};
+use bulletproofs::r1cs::{Prover, Verifier};
 use bulletproofs::{BulletproofGens, PedersenGens};
 use curve25519_dalek::ristretto::CompressedRistretto;
-use hades252::scalar;
+use hades252::linear_combination::{ConstraintSystem, LinearCombination};
+use hades252::scalar::{self, Scalar};
 use merlin::Transcript;
 use rand::thread_rng;
 
-use bulletproofs::r1cs::{LinearCombination, R1CSError, R1CSProof, Variable};
-use curve25519_dalek::scalar::Scalar;
+use bulletproofs::r1cs::{R1CSError, R1CSProof, Variable};
 
 type ProofResult<T> = Result<T, R1CSError>;
 use std::time::Instant;
@@ -284,19 +284,19 @@ fn test_prove_verify() {
 }
 
 fn calc_x(d: Scalar, m: Scalar) -> Scalar {
-    scalar::hash(&[d, m]).unwrap()
+    scalar::sponge::hash(&[d, m]).unwrap()
 }
 
 fn calc_y(seed: Scalar, x: Scalar) -> Scalar {
-    scalar::hash(&[seed, x]).unwrap()
+    scalar::sponge::hash(&[seed, x]).unwrap()
 }
 
 fn calc_m(k: Scalar) -> Scalar {
-    scalar::hash(&[k]).unwrap()
+    scalar::sponge::hash(&[k]).unwrap()
 }
 
 fn calc_z(seed: Scalar, m: Scalar) -> Scalar {
-    scalar::hash(&[seed, m]).unwrap()
+    scalar::sponge::hash(&[seed, m]).unwrap()
 }
 
 fn rand_bid_list(size: usize, secret_bid: Scalar, insert_at: usize) -> Vec<Scalar> {

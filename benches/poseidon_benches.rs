@@ -6,12 +6,12 @@ use criterion::black_box;
 use criterion::Criterion;
 use rand::thread_rng;
 
-use bulletproofs::r1cs::{LinearCombination, Verifier};
-use curve25519_dalek::scalar::Scalar;
+use bulletproofs::r1cs::Verifier;
 use merlin::Transcript;
 
 use hades252::linear_combination;
-use hades252::scalar;
+use hades252::linear_combination::LinearCombination;
+use hades252::scalar::{self, Scalar};
 
 mod scalar_benches {
     use super::*;

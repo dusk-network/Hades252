@@ -1,9 +1,10 @@
 use crate::errors::PermError;
 use crate::mds_matrix::MDS_MATRIX;
 use crate::round_constants::ROUND_CONSTANTS;
+use crate::scalar::Scalar;
 use crate::{FULL_ROUNDS, PARTIAL_ROUNDS};
-use bulletproofs::r1cs::{ConstraintSystem, LinearCombination};
-use curve25519_dalek::scalar::Scalar;
+
+pub use bulletproofs::r1cs::{ConstraintSystem, LinearCombination};
 
 pub mod merkle;
 pub mod sponge;

@@ -1,5 +1,6 @@
-use bulletproofs::r1cs::{ConstraintSystem, LinearCombination, Variable};
-use curve25519_dalek::scalar::Scalar;
+use crate::linear_combination::{ConstraintSystem, LinearCombination};
+use crate::scalar::Scalar;
+use bulletproofs::r1cs::Variable;
 
 pub fn score_gadget<CS: ConstraintSystem>(
     cs: &mut CS,

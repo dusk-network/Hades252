@@ -1,9 +1,9 @@
 #![allow(non_snake_case)]
 use lazy_static::*;
 
+use crate::linear_combination::LinearCombination;
+use crate::scalar::Scalar;
 use crate::WIDTH;
-use bulletproofs::r1cs::LinearCombination;
-use curve25519_dalek::scalar::Scalar;
 use std::ops::Mul;
 
 lazy_static! {

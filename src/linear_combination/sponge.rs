@@ -1,7 +1,7 @@
 use crate::errors::PermError;
+use crate::linear_combination::{ConstraintSystem, LinearCombination};
 use crate::mds_matrix::MDS_MATRIX;
-use bulletproofs::r1cs::{ConstraintSystem, LinearCombination};
-use curve25519_dalek::scalar::Scalar;
+use crate::scalar::Scalar;
 
 pub fn hash(
     cs: &mut dyn ConstraintSystem,

@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use curve25519_dalek::scalar::Scalar;
+use crate::scalar::Scalar;
 use lazy_static::*;
 
 lazy_static! {

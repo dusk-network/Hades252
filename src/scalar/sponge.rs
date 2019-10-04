@@ -1,6 +1,6 @@
 use crate::errors::PermError;
 use crate::mds_matrix::MDS_MATRIX;
-use curve25519_dalek::scalar::Scalar;
+use crate::scalar::Scalar;
 
 pub fn hash(data: &[Scalar]) -> Result<Scalar, PermError> {
     let width = MDS_MATRIX.len();
