@@ -1,7 +1,7 @@
 #![feature(test)]
 
 pub mod errors;
-mod mds_matrix;
-pub mod scalar;
 pub mod linear_combination;
+mod mds_matrix;
 mod round_constants;
+pub mod scalar;

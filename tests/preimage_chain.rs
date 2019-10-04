@@ -108,7 +108,7 @@ fn preimage_chain_gadget(
     d_lc: LinearCombination,
     cs: &mut dyn ConstraintSystem,
 ) -> Result<(), PermError> {
-    use hades252::linear_combination::hash;
+    use hades252::linear_combination::sponge::hash;
 
     // x = H(y)
     let x = hash(cs, &[pre_image_y]).unwrap();
