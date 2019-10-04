@@ -1,13 +1,11 @@
 use crate::errors::PermError;
 use crate::mds_matrix::MDS_MATRIX;
 use crate::round_constants::ROUND_CONSTANTS;
+use crate::{FULL_ROUNDS, PARTIAL_ROUNDS};
 use curve25519_dalek::scalar::Scalar;
 
 pub mod merkle;
 pub mod sponge;
-
-const TOTAL_FULL_ROUNDS: usize = 8;
-const PARTIAL_ROUNDS: usize = 59;
 
 // Utility methods on the permutation struct
 pub(crate) fn perm(data: Vec<Scalar>) -> Result<Vec<Scalar>, PermError> {
@@ -16,7 +14,7 @@ pub(crate) fn perm(data: Vec<Scalar>) -> Result<Vec<Scalar>, PermError> {
     let mut new_words = data;
 
     // Apply R_f full rounds
-    for _ in 0..TOTAL_FULL_ROUNDS / 2 {
+    for _ in 0..FULL_ROUNDS / 2 {
         new_words = apply_full_round(&mut constants_iter, new_words)?;
     }
 
@@ -26,7 +24,7 @@ pub(crate) fn perm(data: Vec<Scalar>) -> Result<Vec<Scalar>, PermError> {
     }
 
     // Apply R_f full rounds
-    for _ in 0..TOTAL_FULL_ROUNDS / 2 {
+    for _ in 0..FULL_ROUNDS / 2 {
         new_words = apply_full_round(&mut constants_iter, new_words)?;
     }
 

@@ -1,11 +1,10 @@
 #![allow(non_snake_case)]
 use lazy_static::*;
 
+use crate::WIDTH;
 use bulletproofs::r1cs::LinearCombination;
 use curve25519_dalek::scalar::Scalar;
 use std::ops::Mul;
-
-const WIDTH: usize = 9;
 
 lazy_static! {
     pub static ref MDS_MATRIX: [[Scalar; WIDTH]; WIDTH] = {
@@ -51,4 +50,9 @@ impl<'a> Mul<&'a MDS_MATRIX> for Vec<LinearCombination> {
             .map(|row| dot_product_lc(row, self.clone()))
             .collect()
     }
+}
+
+#[cfg(test)]
+mod tests {
+    // TODO Grant `MDS_MATRIX` holds all properties of a MDS matrix
 }

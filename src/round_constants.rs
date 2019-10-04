@@ -4,7 +4,7 @@ use curve25519_dalek::scalar::Scalar;
 use lazy_static::*;
 
 lazy_static! {
-    pub static ref ROUND_CONSTANTS: [Scalar; 960] = {
+    pub(crate) static ref ROUND_CONSTANTS: [Scalar; 960] = {
         let bytes = include_bytes!("ark.bin");
 
         unsafe { std::ptr::read(bytes.as_ptr() as *const _) }
