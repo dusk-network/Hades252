@@ -54,5 +54,15 @@ impl<'a> Mul<&'a MDS_MATRIX> for Vec<LinearCombination> {
 
 #[cfg(test)]
 mod tests {
+    use crate::*;
+
+    #[test]
+    fn mds_dimensions() {
+        assert_eq!(WIDTH, mds_matrix::MDS_MATRIX.len());
+        mds_matrix::MDS_MATRIX
+            .iter()
+            .for_each(|row| assert_eq!(WIDTH, row.len()));
+    }
+
     // TODO Grant `MDS_MATRIX` holds all properties of a MDS matrix
 }

@@ -3,24 +3,63 @@ use crate::scalar::{self, Scalar};
 use crate::{MERKLE_ARITY, MERKLE_INNER_WIDTH, MERKLE_WIDTH, WIDTH};
 
 pub fn hash(data: &[Option<Scalar>]) -> Result<Scalar, PermError> {
+    if data.len() > MERKLE_ARITY {
+        return Err(PermError::MerkleWidthOverflow);
+    }
+
+    // Normalize the input
+    let mut leaves = [Scalar::zero(); WIDTH];
+    let mut bitflag = 0u64;
+
+    data.iter().enumerate().for_each(|(i, scalar)| {
+        if let Some(s) = scalar {
+            leaves[i + 1] = *s;
+            bitflag |= 1u64 << MERKLE_ARITY - i - 1;
+        }
+    });
+
+    leaves[0] = Scalar::from(bitflag);
+    scalar::perm(leaves.to_vec()).map(|p| p[1])
+}
+
+pub fn root(data: &[Option<Scalar>]) -> Result<Scalar, PermError> {
     if data.len() > MERKLE_WIDTH {
         return Err(PermError::MerkleWidthOverflow);
     }
 
     let mut row = input_to_merkle_row(data);
-    let mut merkle = MERKLE_INNER_WIDTH;
+    let mut merkle = MERKLE_WIDTH / MERKLE_ARITY;
+    let mut raw_index;
+    let full_flags = Scalar::from((1u64 << MERKLE_ARITY) - 1);
 
     while merkle > 0 {
-        for r in 0..merkle / WIDTH {
-            let perm_slice = &row[WIDTH * r..WIDTH * (r + 1)];
+        raw_index = 0;
+
+        for j in 0..merkle {
+            raw_index += 1;
+
+            // Skip the bitflags position
+            if raw_index % WIDTH == 0 {
+                raw_index += 1;
+            }
+
+            let index = j * WIDTH;
+
+            let perm_slice = &row[index..index + WIDTH];
             let result = scalar::perm(perm_slice.to_vec())?[1];
-            row[r] = result;
+
+            row[raw_index] = result;
+        }
+
+        // Set the skipped bitflags
+        for j in 0..merkle {
+            row[j * WIDTH] = full_flags;
         }
 
         merkle /= MERKLE_ARITY;
     }
 
-    Ok(row[0])
+    Ok(row[1])
 }
 
 /// Normalize the input.
@@ -186,16 +225,16 @@ mod tests {
 
     #[test]
     fn merkle() {
-        let result = merkle::hash(&[Some(Scalar::one())]).unwrap();
+        let result = merkle::root(&[Some(Scalar::one())]).unwrap();
         assert_ne!(Scalar::zero(), result)
     }
 
     #[test]
     fn merkle_pad() {
-        let result = merkle::hash(&[Some(Scalar::one())]).unwrap();
+        let result = merkle::root(&[Some(Scalar::one())]).unwrap();
         assert_ne!(
             result,
-            merkle::hash(&[Some(Scalar::one()), Some(Scalar::zero())]).unwrap()
+            merkle::root(&[Some(Scalar::one()), Some(Scalar::zero())]).unwrap()
         );
     }
 
@@ -206,13 +245,36 @@ mod tests {
             .take(MERKLE_ARITY)
             .collect();
 
-        let result = merkle::hash(v.as_slice()).unwrap();
-        assert_eq!(result, merkle::hash(v.as_slice()).unwrap());
+        let result = merkle::root(v.as_slice()).unwrap();
+        assert_eq!(result, merkle::root(v.as_slice()).unwrap());
 
         let v: Vec<Option<Scalar>> = std::iter::repeat(Some(Scalar::random(&mut rng)))
             .take(MERKLE_WIDTH)
             .collect();
 
-        assert_ne!(result, merkle::hash(v.as_slice()).unwrap());
+        assert_ne!(result, merkle::root(v.as_slice()).unwrap());
+    }
+
+    #[test]
+    fn merkle_sanity_proof() {
+        let base = Scalar::one();
+        let root = merkle::root(&[Some(base)]).unwrap();
+
+        let mut main_path = merkle::hash(&[Some(base)]).unwrap();
+        let mut round_void = merkle::hash(&[]).unwrap();
+        let mut void: Vec<Option<Scalar>> = std::iter::repeat(Some(round_void))
+            .take(MERKLE_ARITY)
+            .collect();
+
+        for _ in 0.._MERKLE_HEIGHT - 2 {
+            round_void = merkle::hash(void.as_slice()).unwrap();
+            void[0] = Some(main_path);
+            main_path = merkle::hash(void.as_slice()).unwrap();
+            void = std::iter::repeat(Some(round_void))
+                .take(MERKLE_ARITY)
+                .collect();
+        }
+
+        assert_eq!(root, main_path);
     }
 }

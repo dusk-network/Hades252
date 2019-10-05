@@ -23,8 +23,14 @@ mod tests {
 
     #[test]
     fn constants_consistency() {
-        // Grant we have enough constants for the rounds setup
+        // Grant we have enough constants for the sbox rounds
         assert!(WIDTH * (FULL_ROUNDS + PARTIAL_ROUNDS) <= round_constants::ROUND_CONSTANTS.len());
+
+        // Sanity check for the arity
+        assert!(MERKLE_ARITY > 1);
+
+        // Sanity check for the height
+        assert!(_MERKLE_HEIGHT > 2);
 
         // Enforce a relation between the provided MDS matrix and the arity of the merkle tree
         assert_eq!(WIDTH, MERKLE_ARITY + 1);
@@ -32,8 +38,11 @@ mod tests {
         // Enforce at least one level for the merkle tree
         assert!(MERKLE_WIDTH > MERKLE_ARITY);
 
-        // Grant the desired arity is consitent to the desired width
-        assert_eq!(MERKLE_ARITY.pow(_MERKLE_HEIGHT as u32 - 1), MERKLE_WIDTH);
+        // Grant the defined arity is consistent with the defined width
+        assert_eq!(
+            MERKLE_ARITY.pow(std::cmp::max(2, _MERKLE_HEIGHT as u32 - 1)),
+            MERKLE_WIDTH
+        );
 
         // Grant the inner width is consistent to the proportion width x arity
         assert_eq!(WIDTH * MERKLE_WIDTH / MERKLE_ARITY, MERKLE_INNER_WIDTH)
