@@ -5,18 +5,18 @@ use crate::round_constants::ROUND_CONSTANTS;
 use bulletproofs::r1cs::{ConstraintSystem, LinearCombination};
 use curve25519_dalek::scalar::Scalar;
 
-/// Total ammount of full rounds that will be applied. 
+/// Total amount of full rounds that will be applied. 
 /// This is expressed as `RF` in the Poseidon paper.
 const TOTAL_FULL_ROUNDS: usize = 8;
 
-/// Total ammount of partial rounds that will be applied. 
+/// Total amount of partial rounds that will be applied. 
 /// This is expressed as `Rp` in the Poseidon paper.
 const PARTIAL_ROUNDS: usize = 59;
 
 /// Applies a `permutation-round` of the `Poseidon252` hashing algorithm. 
 /// 
 /// It returns a vec of `WIDTH` outputs as a result which should be 
-/// a randomly permuted version of the input.  
+/// a randomly bijectively transformed version of the input.  
 /// 
 /// In general, the same round function is iterated enough times
 /// to make sure that any symmetries and structural properties that
@@ -24,14 +24,9 @@ const PARTIAL_ROUNDS: usize = 59;
 /// 
 /// This `permutation` is a 3-step process that:
 /// 
-/// - Applies twice the half of the `FULL_ROUNDS` 
-/// (which can be understood as linear ops).
+/// - Applies twice the half of the `FULL_ROUNDS`.
 ///  
-/// - In the middle step it applies the `PARTIAL_ROUNDS` 
-/// (which can be understood as non-linear ops).
-/// 
-/// This structure allows to minimize the number of non-linear
-/// ops while mantaining the security.
+/// - In the middle step it applies the `PARTIAL_ROUNDS`.
 fn perm(
   cs: &mut dyn ConstraintSystem,
   data: Vec<LinearCombination>,
@@ -146,7 +141,7 @@ where
 /// Computes `input ^ 5 (mod Fp)`
 /// 
 /// The modulo depends on the input you use. In our case
-/// the modulo is done in respect of the `curve25519 scalar field`
+/// the modulo is done in respect of the `size of Ristretto255 scalar field`
 ///  == `2^252 + 27742317777372353535851937790883648493`.
 fn quintic_s_box(cs: &mut dyn ConstraintSystem, lc: LinearCombination) -> LinearCombination {
   let (lc, _, square) = cs.multiply(lc.clone(), lc);
@@ -157,16 +152,15 @@ fn quintic_s_box(cs: &mut dyn ConstraintSystem, lc: LinearCombination) -> Linear
 }
 
 /// Performs the Poseidon-252 hash algorithm over a set of inputs. 
-/// 
-/// In this implementation, apply the hash is the same as applying
-/// just one permutation over the inputs (padding and setting a 0 
-/// at the beginning of the input set) since the arity of 
-/// the merkle tree is `9` and we don't accept more than 8 inputs. 
+/// Applying the hash function is the same as applying one `permutation`
+/// over a vector of inputs of size `width` where the first element is 
+/// set to `zero`, and any necessary padding is added to ensure that 
+/// the input is of size `width`."
 /// 
 /// # Returns
 /// - `Ok(LinearCombination)` if the number of inputs is lower than
 /// the arity of the Merkle tree. 
-/// - `Err` -> `PermError`: Which means that the ammount of inputs
+/// - `Err` -> `PermError`: Which means that the amount of inputs
 /// of the hash function exceeds the limit `8`.
 pub fn hash(
   cs: &mut dyn ConstraintSystem,
