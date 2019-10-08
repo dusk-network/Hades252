@@ -30,7 +30,7 @@
 //! // Since the `WIDTH` is set to `9` we can use `8`
 //! // inputs as much.
 //! // If we use less, the function will take care of padding them
-//! // propperly.
+//! // properly.
 //! let input = [Scalar::one(); 7];
 //! 
 //! // Hash the data and get the resulting `Scalar`.
