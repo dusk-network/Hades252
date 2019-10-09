@@ -13,7 +13,6 @@ use merlin::Transcript;
 use hades252::linear_combination;
 use hades252::scalar;
 
-
 mod scalar_benches {
     use super::*;
 
@@ -57,7 +56,7 @@ mod lc_benches {
     fn digest_one() -> () {
         let s = LinearCombination::from(Scalar::random(&mut thread_rng()));
 
-        // The `Verifier` instantiation is negligible, taking roughly 0.000001% 
+        // The `Verifier` instantiation is negligible, taking roughly 0.000001%
         // of the total benchmark time.
         let mut verifier_transcript = Transcript::new(b"");
         let mut verifier = Verifier::new(&mut verifier_transcript);
@@ -67,9 +66,11 @@ mod lc_benches {
 
     #[inline]
     fn digest(n: usize) -> () {
-        let s: Vec<LinearCombination> = (0..n).map(|_| LinearCombination::from(Scalar::random(&mut thread_rng()))).collect();
-        
-        // The `Verifier` instantiation is negligible, taking roughly 0.000001% 
+        let s: Vec<LinearCombination> = (0..n)
+            .map(|_| LinearCombination::from(Scalar::random(&mut thread_rng())))
+            .collect();
+
+        // The `Verifier` instantiation is negligible, taking roughly 0.000001%
         // of the total benchmark time.
         let mut verifier_transcript = Transcript::new(b"");
         let mut verifier = Verifier::new(&mut verifier_transcript);
@@ -78,15 +79,21 @@ mod lc_benches {
     }
 
     pub fn hash_one_lc(c: &mut Criterion) {
-        c.bench_function("Hashing single `LinearCombination`", |b| b.iter(|| digest_one()));
+        c.bench_function("Hashing single `LinearCombination`", |b| {
+            b.iter(|| digest_one())
+        });
     }
 
     pub fn hash_two_lcs(c: &mut Criterion) {
-        c.bench_function("Hashing two `LinearCombination`", |b| b.iter(|| digest(black_box(2))));
+        c.bench_function("Hashing two `LinearCombination`", |b| {
+            b.iter(|| digest(black_box(2)))
+        });
     }
 
     pub fn hash_four_lcs(c: &mut Criterion) {
-        c.bench_function("Hashing four `LinearCombination`", |b| b.iter(|| digest(black_box(4))));
+        c.bench_function("Hashing four `LinearCombination`", |b| {
+            b.iter(|| digest(black_box(4)))
+        });
     }
 }
 
