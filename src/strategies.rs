@@ -26,7 +26,7 @@ where
     /// The modulo depends on the input you use. In our case
     /// the modulo is done in respect of the `curve25519 scalar field`
     ///  == `2^252 + 27742317777372353535851937790883648493`.
-    fn quintic_s_box(&mut self, value: &T) -> T;
+    fn quintic_s_box(&mut self, value: &mut T);
 
     /// Multiply the values for MDS matrix.
     fn mul_matrix(&mut self, values: Vec<T>) -> Vec<T>;
@@ -71,7 +71,7 @@ where
         // Add round keys to each word
         let mut new_words = self.add_round_key(constants, words);
         // Then apply quintic s-box to first element
-        new_words[0] = self.quintic_s_box(&new_words[0]);
+        self.quintic_s_box(&mut new_words[0]);
         // Multiply this result by the MDS matrix
         self.mul_matrix(new_words)
     }
@@ -93,16 +93,15 @@ where
         I: Iterator<Item = &'a Scalar>,
     {
         // Add round keys to each word
-        let new_words = self.add_round_key(constants, words);
+        let mut new_words = self.add_round_key(constants, words);
 
         // Then apply quintic s-box
-        let quintic_words: Vec<T> = new_words
-            .iter()
-            .map(|word| self.quintic_s_box(word))
-            .collect();
+        new_words
+            .iter_mut()
+            .for_each(|mut word| self.quintic_s_box(&mut word));
 
         // Multiply this result by the MDS matrix
-        self.mul_matrix(quintic_words)
+        self.mul_matrix(new_words)
     }
 
     /// Applies a `permutation-round` of the `Hades252` strategy.
@@ -160,9 +159,12 @@ impl ScalarStrategy {
 }
 
 impl Strategy<Scalar> for ScalarStrategy {
-    fn quintic_s_box(&mut self, value: &Scalar) -> Scalar {
-        value * value * value * value * value
+    fn quintic_s_box(&mut self, value: &mut Scalar) {
+        let v = *value;
+
+        *value = v * v * v * v * v;
     }
+
     fn mul_matrix(&mut self, values: Vec<Scalar>) -> Vec<Scalar> {
         values * &MDS_MATRIX
     }
@@ -182,13 +184,14 @@ impl<'a> GadgetStrategy<'a> {
     }
 }
 impl<'a> Strategy<LinearCombination> for GadgetStrategy<'a> {
-    fn quintic_s_box(&mut self, value: &LinearCombination) -> LinearCombination {
-        let (value, _, square) = self.cs.multiply(value.clone(), value.clone());
+    fn quintic_s_box(&mut self, value: &mut LinearCombination) {
+        let (_, _, square) = self.cs.multiply(value.clone(), value.clone());
         let (_, _, quartic) = self.cs.multiply(square.into(), square.into());
-        let (_, _, quintic) = self.cs.multiply(quartic.into(), value.into());
+        let (_, _, quintic) = self.cs.multiply(quartic.into(), value.clone());
 
-        quintic.into()
+        *value = quintic.into();
     }
+
     fn mul_matrix(&mut self, values: Vec<LinearCombination>) -> Vec<LinearCombination> {
         values * &MDS_MATRIX
     }
