@@ -6,6 +6,7 @@
 //! and then mapped onto `Scalar` in the Ristretto scalar field.
 #![allow(non_snake_case)]
 
+use crate::{PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS, WIDTH};
 use curve25519_dalek::scalar::Scalar;
 use lazy_static::*;
 
@@ -20,8 +21,9 @@ lazy_static! {
   /// https://extgit.iaik.tugraz.at/krypto/hadesmimc/blob/master/code/calc_round_numbers.py
   /// and then mapped onto `Scalar` in the Ristretto scalar field.
   pub static ref ROUND_CONSTANTS: [Scalar; 960] = {
-    let bytes = include_bytes!("ark.bin");
+    let bytes = include_bytes!("../assets/ark.bin");
 
+    assert!(bytes.len() >= ((TOTAL_FULL_ROUNDS + PARTIAL_ROUNDS) * WIDTH) << 5);
     unsafe { std::ptr::read(bytes.as_ptr() as *const _) }
   };
 }
