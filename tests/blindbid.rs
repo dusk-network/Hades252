@@ -6,13 +6,21 @@ use bulletproofs::{BulletproofGens, PedersenGens};
 use curve25519_dalek::ristretto::CompressedRistretto;
 use hades252::scalar;
 use merlin::Transcript;
-use rand::thread_rng;
+use rand::rngs::OsRng;
+use rand::RngCore;
 
 use bulletproofs::r1cs::{LinearCombination, R1CSError, R1CSProof, Variable};
 use curve25519_dalek::scalar::Scalar;
 
 type ProofResult<T> = Result<T, R1CSError>;
 use std::time::Instant;
+
+pub fn gen_random_scalar() -> Scalar {
+    let mut s = [0x00u8; 32];
+    OsRng.fill_bytes(&mut s);
+    Scalar::from_bits(s)
+}
+
 pub fn prove(
     d: Scalar,
     k: Scalar,
@@ -39,17 +47,12 @@ pub fn prove(
     let mut blinding_rng = rand::thread_rng();
 
     let (commitments, vars): (Vec<_>, Vec<_>) = [d, k, y_inv]
-        .into_iter()
+        .iter()
         .map(|v| prover.commit(*v, Scalar::random(&mut blinding_rng)))
         .unzip();
 
     let (t_c, t_v): (Vec<_>, Vec<_>) = (0..pub_list.len())
-        .map(|x| {
-            prover.commit(
-                Scalar::from((x == toggle) as u8),
-                Scalar::random(&mut thread_rng()),
-            )
-        })
+        .map(|x| prover.commit(Scalar::from((x == toggle) as u8), gen_random_scalar()))
         .unzip();
 
     // public list of numbers
@@ -91,7 +94,6 @@ pub fn verify(
 ) -> ProofResult<()> {
     let pc_gens = PedersenGens::default();
     let bp_gens = BulletproofGens::new(4096, 1);
-    let mut rng = rand::thread_rng();
 
     // Verifier logic
 
@@ -128,7 +130,7 @@ pub fn verify(
 
     // 4. Verify the proof
     let res = verifier
-        .verify(&proof, &pc_gens, &bp_gens, &mut rng)
+        .verify(&proof, &pc_gens, &bp_gens)
         .map_err(|_| R1CSError::VerificationError);
 
     let end = start.elapsed();
@@ -243,20 +245,15 @@ fn boolean_gadget<CS: ConstraintSystem>(cs: &mut CS, a1: LinearCombination) {
     cs.constrain(c_var.into());
 }
 
-use rand::rngs::OsRng;
-use rand::RngCore;
-
 #[test]
 fn test_prove_verify() {
-    let mut csprng: OsRng = OsRng::new().unwrap();
-
-    let k: Scalar = Scalar::random(&mut csprng);
+    let k = gen_random_scalar();
     let m = calc_m(k);
 
-    let d: Scalar = Scalar::random(&mut csprng);
+    let d = gen_random_scalar();
     let bid: Scalar = calc_x(d, m);
 
-    let seed: Scalar = Scalar::random(&mut csprng);
+    let seed = gen_random_scalar();
     let y: Scalar = calc_y(seed, bid);
     let y_inv: Scalar = y.invert();
 
@@ -302,8 +299,6 @@ fn calc_z(seed: Scalar, m: Scalar) -> Scalar {
 fn rand_bid_list(size: usize, secret_bid: Scalar, insert_at: usize) -> Vec<Scalar> {
     assert!(insert_at < size);
 
-    let mut csprng = OsRng::new().unwrap();
-
     let mut bid_list: Vec<Scalar> = Vec::with_capacity(size);
     for i in 0..size {
         if insert_at == i {
@@ -311,7 +306,7 @@ fn rand_bid_list(size: usize, secret_bid: Scalar, insert_at: usize) -> Vec<Scala
             continue;
         }
 
-        let x_i: Scalar = Scalar::from(csprng.next_u64());
+        let x_i = gen_random_scalar();
         bid_list.push(x_i);
     }
 
