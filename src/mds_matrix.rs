@@ -1,15 +1,10 @@
 #![allow(non_snake_case)]
 use lazy_static::*;
 
+use crate::WIDTH;
 use bulletproofs::r1cs::LinearCombination;
 use curve25519_dalek::scalar::Scalar;
 use std::ops::Mul;
-
-/// This represents the ammount of inputs used to perform
-/// a permutation (padding included).
-///
-/// So the number of inputs is `WIDTH - 1`.
-const WIDTH: usize = 9;
 
 lazy_static! {
   /// Represents a `static reference` to the
@@ -17,9 +12,9 @@ lazy_static! {
   /// of `(WIDTH x WIDTH)`.
   ///
   /// This matrix is loaded from the `mds.bin` file where
-  /// the matrix is pre-computed and represented in bytes.
+  /// is pre-computed and represented in bytes.
   pub static ref MDS_MATRIX: [[Scalar; WIDTH]; WIDTH] = {
-    let bytes = include_bytes!("mds.bin");
+    let bytes = include_bytes!("../assets/mds.bin");
 
     assert_eq!(bytes.len(), (WIDTH * WIDTH) << 5);
 
