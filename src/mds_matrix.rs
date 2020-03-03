@@ -1,10 +1,8 @@
 #![allow(non_snake_case)]
-use lazy_static::*;
+use crate::{Scalar, WIDTH};
 
-use crate::WIDTH;
-use bulletproofs::r1cs::LinearCombination;
-use curve25519_dalek::scalar::Scalar;
-use std::ops::Mul;
+use lazy_static::lazy_static;
+use num_traits::{One, Zero};
 
 lazy_static! {
   /// Represents a `static reference` to the
@@ -13,65 +11,33 @@ lazy_static! {
   ///
   /// This matrix is loaded from the `mds.bin` file where
   /// is pre-computed and represented in bytes.
-  pub static ref MDS_MATRIX: [[Scalar; WIDTH]; WIDTH] = {
-    let bytes = include_bytes!("../assets/mds.bin");
-
-    assert_eq!(bytes.len(), (WIDTH * WIDTH) << 5);
-
-    unsafe { std::ptr::read(bytes.as_ptr() as *const _) }
-  };
+  pub static ref MDS_MATRIX: [[Scalar; WIDTH]; WIDTH] = mds();
 }
 
-/// Represents the product `row_vec * column_vec` for the
-/// `Scalar` use case.
-///
-/// This operation returns a Scalar as a result.
-fn dot_product(a: &[Scalar], b: &[Scalar]) -> Scalar {
-    a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
-}
+fn mds() -> [[Scalar; WIDTH]; WIDTH] {
+    let mut matrix = [[Scalar::zero(); WIDTH]; WIDTH];
+    let mut xs = [Scalar::zero(); WIDTH];
+    let mut ys = [Scalar::zero(); WIDTH];
 
-/// Represents the product `row_lc_vec * column_scalar_vec` for the
-/// `LinearCombination` use case.
-///
-/// This operation returns a `simplified` `LinearCombination`
-/// which means that the `LinearCombination` gets simplified by
-/// taking Variables common across terms and adding their
-/// corresponding scalars.
-/// This, at the end, reduces the size of the vector that holds
-/// the `lcs`.
-fn dot_product_lc(a: &[Scalar], b: Vec<LinearCombination>) -> LinearCombination {
-    let l_cs: Vec<LinearCombination> = a
-        .iter()
-        .zip(b.iter())
-        .map(|(a_i, b_i)| *a_i * b_i.clone())
-        .collect();
+    // Generate x and y values deterministically for the cauchy matrix
+    // where x[i] != y[i] to allow the values to be inverted
+    // and there are no duplicates in the x vector or y vector, so that the determinant is always non-zero
+    // [a b]
+    // [c d]
+    // det(M) = (ad - bc) ; if a == b and c == d => det(M) =0
+    // For an MDS matrix, every possible mxm submatrix, must have det(M) != 0
+    (0..WIDTH).for_each(|i| {
+        xs[i] = Scalar::from(i as u64);
+        ys[i] = Scalar::from((i + WIDTH) as u64);
+    });
 
-    let mut sum: LinearCombination = Scalar::zero().into();
+    let mut m = 0;
+    (0..WIDTH).for_each(|i| {
+        (0..WIDTH).for_each(|j| {
+            matrix[m][j] = Scalar::one() / (xs[i] + ys[j]);
+        });
+        m += 1;
+    });
 
-    for l_c in l_cs {
-        sum = sum + l_c;
-    }
-
-    sum.simplify()
-}
-
-impl<'a> Mul<&'a MDS_MATRIX> for Vec<Scalar> {
-    type Output = Vec<Scalar>;
-    /// Performs the `mul` between a Matrix of `Scalar` and
-    /// a vector of `Scalar` which results on a `Vec<Scalar>`.
-    fn mul(self, rhs: &'a MDS_MATRIX) -> Vec<Scalar> {
-        rhs.iter().map(|row| dot_product(row, &self)).collect()
-    }
-}
-
-impl<'a> Mul<&'a MDS_MATRIX> for Vec<LinearCombination> {
-    type Output = Vec<LinearCombination>;
-    /// Performs the `mul` between a Matrix of `Scalar` and
-    /// a vector of `LinearCombination` which results on a
-    /// `Vec<LinearCombination>`.
-    fn mul(self, rhs: &'a MDS_MATRIX) -> Vec<LinearCombination> {
-        rhs.iter()
-            .map(|row| dot_product_lc(row, self.clone()))
-            .collect()
-    }
+    matrix
 }
