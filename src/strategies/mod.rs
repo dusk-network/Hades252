@@ -3,24 +3,22 @@
 //! Rank 1 Constraint Systems (R1CS).
 //!
 //! The inputs of the permutation function have to be explicitly
-//! over the Scalar Field of the curve25519 so working over
+//! over the DalekScalar Field of the curve25519 so working over
 //! `Fp = 2^252 + 27742317777372353535851937790883648493`.
-use crate::mds_matrix::MDS_MATRIX;
-use crate::round_constants::ROUND_CONSTANTS;
-use crate::{PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS};
-use bulletproofs::r1cs::{ConstraintSystem, LinearCombination};
-use curve25519_dalek::scalar::Scalar;
-use std::iter::FromIterator;
-use std::ops::Add;
 
-pub trait StrategyInput = From<Scalar> + Clone + Add;
+use crate::{round_constants::ROUND_CONSTANTS, Scalar, PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS};
+
+pub use gadget::GadgetStrategy;
+pub use scalar::ScalarStrategy;
+
+/// Strategy for zero-knowledge plonk circuits
+pub mod gadget;
+
+/// Strategy for scalars
+pub mod scalar;
 
 /// Defines the Hades252 strategy algorithm.
-pub trait Strategy<T>
-where
-    T: StrategyInput,
-    Vec<T>: FromIterator<<T as Add>::Output>,
-{
+pub trait Strategy<T> {
     /// Computes `input ^ 5 (mod Fp)`
     ///
     /// The modulo depends on the input you use. In our case
@@ -29,7 +27,7 @@ where
     fn quintic_s_box(&mut self, value: &mut T);
 
     /// Multiply the values for MDS matrix.
-    fn mul_matrix(&mut self, values: Vec<T>) -> Vec<T>;
+    fn mul_matrix(&mut self, values: &mut [T]);
 
     /// Add round keys to a set of `StrategyInput`.
     ///
@@ -38,19 +36,9 @@ where
     ///
     /// Basically it allows to destroy any connection between the
     /// inputs and the outputs of the function.
-    fn add_round_key<'a, I>(&mut self, constants: &mut I, words: Vec<T>) -> Vec<T>
+    fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [T])
     where
-        I: Iterator<Item = &'a Scalar>,
-    {
-        words
-            .iter()
-            .map(|word| {
-                let c = constants.next().unwrap();
-                let c = T::from(*c);
-                word.clone() + c
-            })
-            .collect()
-    }
+        I: Iterator<Item = &'b Scalar>;
 
     /// Applies a `Partial Round` also known as a
     /// `Partial S-Box layer` to a set of inputs.
@@ -64,16 +52,19 @@ where
     /// - Multiplies the output words from the second step by
     /// the `MDS_MATRIX`.
     /// This is known as the `Mix Layer`.
-    fn apply_partial_round<'a, I>(&mut self, constants: &mut I, words: Vec<T>) -> Vec<T>
+    fn apply_partial_round<'b, I>(&mut self, constants: &mut I, words: &mut [T])
     where
-        I: Iterator<Item = &'a Scalar>,
+        I: Iterator<Item = &'b Scalar>,
     {
         // Add round keys to each word
-        let mut new_words = self.add_round_key(constants, words);
-        // Then apply quintic s-box to first element
-        self.quintic_s_box(&mut new_words[0]);
+        self.add_round_key(constants, words);
+
+        // Then apply quintic s-box
+        let last = words.len() - 1;
+        self.quintic_s_box(&mut words[last]);
+
         // Multiply this result by the MDS matrix
-        self.mul_matrix(new_words)
+        self.mul_matrix(words);
     }
 
     /// Applies a `Full Round` also known as a
@@ -88,26 +79,24 @@ where
     /// - Multiplies the output words from the second step by
     /// the `MDS_MATRIX`.
     /// This is known as the `Mix Layer`.
-    fn apply_full_round<'a, I>(&mut self, constants: &mut I, words: Vec<T>) -> Vec<T>
+    fn apply_full_round<'a, I>(&mut self, constants: &mut I, words: &mut [T])
     where
         I: Iterator<Item = &'a Scalar>,
     {
         // Add round keys to each word
-        let mut new_words = self.add_round_key(constants, words);
+        self.add_round_key(constants, words);
 
         // Then apply quintic s-box
-        new_words
-            .iter_mut()
-            .for_each(|word| self.quintic_s_box(word));
+        words.iter_mut().for_each(|w| self.quintic_s_box(w));
 
         // Multiply this result by the MDS matrix
-        self.mul_matrix(new_words)
+        self.mul_matrix(words)
     }
 
     /// Applies a `permutation-round` of the `Hades252` strategy.
     ///
     /// It returns a vec of `WIDTH` outputs as a result which should be
-    /// a randomly permuted version of the input.  
+    /// a randomly permuted version of the input.
     ///
     /// In general, the same round function is iterated enough times
     /// to make sure that any symmetries and structural properties that
@@ -123,75 +112,22 @@ where
     ///
     /// This structure allows to minimize the number of non-linear
     /// ops while mantaining the security.
-    fn perm(&mut self, data: Vec<T>) -> Vec<T> {
+    fn perm(&mut self, data: &mut [T]) {
         let mut constants_iter = ROUND_CONSTANTS.iter();
-
-        let mut new_words = data;
 
         // Apply R_f full rounds
         for _ in 0..TOTAL_FULL_ROUNDS / 2 {
-            new_words = self.apply_full_round(&mut constants_iter, new_words);
+            self.apply_full_round(&mut constants_iter, data);
         }
 
         // Apply R_P partial rounds
         for _ in 0..PARTIAL_ROUNDS {
-            new_words = self.apply_partial_round(&mut constants_iter, new_words);
+            self.apply_partial_round(&mut constants_iter, data);
         }
 
         // Apply R_f full rounds
         for _ in 0..TOTAL_FULL_ROUNDS / 2 {
-            new_words = self.apply_full_round(&mut constants_iter, new_words);
+            self.apply_full_round(&mut constants_iter, data);
         }
-
-        new_words
-    }
-}
-
-/// Implements a Hades252 strategy for `Scalar` as input values.
-#[derive(Default)]
-pub struct ScalarStrategy {}
-
-impl ScalarStrategy {
-    /// Constructs a new `ScalarStrategy`.
-    pub fn new() -> Self {
-        Default::default()
-    }
-}
-
-impl Strategy<Scalar> for ScalarStrategy {
-    fn quintic_s_box(&mut self, value: &mut Scalar) {
-        let s = *value;
-
-        *value = s * s * s * s * s;
-    }
-
-    fn mul_matrix(&mut self, values: Vec<Scalar>) -> Vec<Scalar> {
-        values * &MDS_MATRIX
-    }
-}
-
-/// Implements a Hades252 strategy for `LinearCombination` as input values.
-/// Requires a reference to a `ConstraintSystem`.
-pub struct GadgetStrategy<'a> {
-    /// A reference to the constraint system used by the gadgets
-    pub cs: &'a mut dyn ConstraintSystem,
-}
-
-impl<'a> GadgetStrategy<'a> {
-    /// Constructs a new `GadgetStrategy` with the constraint system.
-    pub fn new(cs: &'a mut dyn ConstraintSystem) -> Self {
-        GadgetStrategy { cs }
-    }
-}
-impl<'a> Strategy<LinearCombination> for GadgetStrategy<'a> {
-    fn quintic_s_box(&mut self, value: &mut LinearCombination) {
-        let (_, _, square) = self.cs.multiply(value.clone(), value.clone());
-        let (_, _, quartic) = self.cs.multiply(square.into(), square.into());
-        let (_, _, quintic) = self.cs.multiply(quartic.into(), value.clone());
-
-        *value = quintic.into()
-    }
-    fn mul_matrix(&mut self, values: Vec<LinearCombination>) -> Vec<LinearCombination> {
-        values * &MDS_MATRIX
     }
 }
