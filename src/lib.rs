@@ -19,5 +19,5 @@ pub const PARTIAL_ROUNDS: usize = 59;
 /// Maximum input width for the rounds
 pub const WIDTH: usize = 5;
 
-pub use algebra::{curves::bls12_381::Bls12_381 as Curve, fields::bls12_381::fr::Fr as Scalar};
+pub use bls12_381::Scalar;
 pub use strategies::{GadgetStrategy, ScalarStrategy, Strategy};

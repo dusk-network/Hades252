@@ -2,8 +2,6 @@ use crate::{mds_matrix::MDS_MATRIX, Scalar, WIDTH};
 
 use super::Strategy;
 
-use num_traits::One;
-
 /// Implements a Hades252 strategy for `Scalar` as input values.
 #[derive(Default)]
 pub struct ScalarStrategy {}

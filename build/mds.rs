@@ -1,11 +1,11 @@
-use super::Scalar;
+use super::{RawScalar, Scalar};
 use std::{fs::File, io::prelude::*};
-
-use num_traits::{One, Zero};
 
 const WIDTH: usize = 5;
 
-fn mds() -> [[Scalar; WIDTH]; WIDTH] {
+fn mds() -> [[u8; 32]; WIDTH * WIDTH] {
+    let mut result = [[0x00u8; 32]; WIDTH * WIDTH];
+
     let mut matrix = [[Scalar::zero(); WIDTH]; WIDTH];
     let mut xs = [Scalar::zero(); WIDTH];
     let mut ys = [Scalar::zero(); WIDTH];
@@ -25,24 +25,24 @@ fn mds() -> [[Scalar; WIDTH]; WIDTH] {
     let mut m = 0;
     (0..WIDTH).for_each(|i| {
         (0..WIDTH).for_each(|j| {
-            matrix[m][j] = Scalar::one() / (xs[i] + ys[j]);
+            matrix[m][j] = (xs[i] + ys[j]).invert().unwrap();
         });
         m += 1;
     });
 
-    matrix
+    (0..WIDTH).for_each(|i| {
+        (0..WIDTH).for_each(|j| {
+            result[i * WIDTH + j] = unsafe { std::mem::transmute(RawScalar::from(matrix[i][j]).0) };
+        });
+    });
+
+    result
 }
 
 pub(crate) fn write_to(filename: &str) -> std::io::Result<()> {
     let mut buf: Vec<u8> = vec![];
 
-    mds().iter().for_each(|row| {
-        row.iter().for_each(|c| {
-            for n in (c.0).0.iter() {
-                buf.extend_from_slice(&n.to_le_bytes());
-            }
-        });
-    });
+    mds().iter().for_each(|b| buf.extend_from_slice(&b[..]));
 
     let mut file = File::create(filename)?;
     file.write_all(&buf)?;

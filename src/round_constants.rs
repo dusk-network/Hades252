@@ -7,9 +7,7 @@
 #![allow(non_snake_case)]
 use crate::Scalar;
 
-use algebra::biginteger::BigInteger256;
 use lazy_static::lazy_static;
-use num_traits::Zero;
 
 const CONSTANTS: usize = 960;
 
@@ -25,24 +23,14 @@ lazy_static! {
   /// and then mapped onto `Scalar` in the Ristretto scalar field.
   pub static ref ROUND_CONSTANTS: [Scalar; CONSTANTS] = {
       let bytes = include_bytes!("../assets/ark.bin");
-      let mut a = [0x00u8; 8];
-      let mut b = [0x00u8; 8];
-      let mut c = [0x00u8; 8];
-      let mut d = [0x00u8; 8];
+      let mut a = [0x00u8; 32];
 
       let mut cnst = [Scalar::zero(); CONSTANTS];
-      cnst.iter_mut().zip((0..bytes.len()).step_by(32)).for_each(|(cn, i)| {
-          a.copy_from_slice(&bytes[i..i+8]);
-          b.copy_from_slice(&bytes[i+8..i+16]);
-          c.copy_from_slice(&bytes[i+16..i+24]);
-          d.copy_from_slice(&bytes[i+24..i+32]);
 
-          *cn = Scalar::from(BigInteger256([
-                  u64::from_le_bytes(a),
-                  u64::from_le_bytes(b),
-                  u64::from_le_bytes(c),
-                  u64::from_le_bytes(d)])
-              );
+      cnst.iter_mut().zip((0..bytes.len()).step_by(32)).for_each(|(cn, i)| {
+          a.copy_from_slice(&bytes[i..i+32]);
+          let b = unsafe { std::mem::transmute_copy(&a) };
+          *cn = Scalar::from_raw(b);
       });
 
       cnst

@@ -1,7 +1,14 @@
 mod ark;
 mod mds;
 
-pub use algebra::{curves::bls12_381::Bls12_381 as Curve, fields::bls12_381::fr::Fr as Scalar};
+pub use bls12_381::Scalar;
+
+struct RawScalar(pub [u64; 4]);
+impl From<Scalar> for RawScalar {
+    fn from(s: Scalar) -> Self {
+        unsafe { std::mem::transmute(s) }
+    }
+}
 
 fn main() -> std::io::Result<()> {
     ark::write_to("assets/ark.bin")?;
