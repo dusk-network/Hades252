@@ -89,7 +89,7 @@ pub trait Strategy<T> {
         // Then apply quintic s-box
         words.iter_mut().for_each(|w| self.quintic_s_box(w));
 
-        // Multiply this result by the MDS matrix
+        //// Multiply this result by the MDS matrix
         self.mul_matrix(words)
     }
 

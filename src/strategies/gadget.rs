@@ -1,45 +1,85 @@
-use crate::{mds_matrix::MDS_MATRIX, Curve, Scalar, WIDTH};
-
 use super::Strategy;
+use crate::{mds_matrix::MDS_MATRIX, Curve, Scalar, PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS, WIDTH};
 
 use num_traits::{One, Zero};
 use plonk::cs::{composer::StandardComposer, constraint_system::Variable};
 
+/// Size of the generated public inputs for the permutation gadget
+pub const PI_SIZE: usize =
+    WIDTH * (TOTAL_FULL_ROUNDS + PARTIAL_ROUNDS) + 65 * TOTAL_FULL_ROUNDS + 53 * PARTIAL_ROUNDS;
+
 /// Implements a Hades252 strategy for `Variable` as input values.
 /// Requires a reference to a `ConstraintSystem`.
-pub struct GadgetStrategy<'a> {
+pub struct GadgetStrategy<'a, P>
+where
+    P: Iterator<Item = &'a mut Scalar>,
+{
     /// A reference to the constraint system used by the gadgets
     pub cs: &'a mut StandardComposer<Curve>,
+    /// Reference to the public inputs created by the gadget
+    pub pi: [Scalar; PI_SIZE],
+    pi_i: usize,
+    /// Mutable iterator over the public inputs
+    pub pi_iter: P,
 }
 
-impl<'a> GadgetStrategy<'a> {
+impl<'a, P> GadgetStrategy<'a, P>
+where
+    P: Iterator<Item = &'a mut Scalar>,
+{
     /// Constructs a new `GadgetStrategy` with the constraint system.
-    pub fn new(cs: &'a mut StandardComposer<Curve>) -> Self {
-        GadgetStrategy { cs }
+    pub fn new(cs: &'a mut StandardComposer<Curve>, pi_iter: P) -> Self {
+        GadgetStrategy {
+            cs,
+            pi: [Scalar::zero(); PI_SIZE],
+            pi_i: 0,
+            pi_iter,
+        }
+    }
+
+    /// Return the inner iterator over public inputs
+    pub fn into_inner(self) -> (&'a mut StandardComposer<Curve>, P) {
+        (self.cs, self.pi_iter)
+    }
+
+    fn push_pi(&mut self, p: Scalar) {
+        self.pi[self.pi_i] = p;
+        self.pi_i += 1;
+        self.pi_iter
+            .next()
+            .map(|s| *s = p)
+            .expect("Public inputs iterator depleted");
     }
 }
 
-impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
+impl<'a, P> Strategy<Variable> for GadgetStrategy<'a, P>
+where
+    P: Iterator<Item = &'a mut Scalar>,
+{
     fn quintic_s_box(&mut self, value: &mut Variable) {
-        let v_var = *value;
-        let v = self.cs.eval(value);
+        let v = *value;
 
-        (0..4).for_each(|_| {
-            let o = self.cs.eval(value) * v;
-            let o_var = self.cs.add_input(o);
-
-            self.cs.mul_gate(
+        (0..2).for_each(|_| {
+            self.push_pi(Scalar::zero());
+            *value = self.cs.mul(
                 *value,
-                v_var,
-                o_var,
+                *value,
                 Scalar::one(),
                 -Scalar::one(),
                 Scalar::zero(),
                 Scalar::zero(),
-            );
-
-            *value = o_var;
+            )
         });
+
+        self.push_pi(Scalar::zero());
+        *value = self.cs.mul(
+            *value,
+            v,
+            Scalar::one(),
+            -Scalar::one(),
+            Scalar::zero(),
+            Scalar::zero(),
+        );
     }
 
     fn mul_matrix(&mut self, values: &mut [Variable]) {
@@ -48,28 +88,20 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
 
         for j in 0..WIDTH {
             for k in 0..WIDTH {
+                self.push_pi(Scalar::zero());
                 let a = self.cs.add_input(MDS_MATRIX[j][k]);
-                let b = values[k];
-                let o = MDS_MATRIX[j][k] * self.cs.eval(&b);
-                let o = self.cs.add_input(o);
-
-                self.cs.mul_gate(
+                let o = self.cs.mul(
                     a,
-                    b,
-                    o,
+                    values[k],
                     Scalar::one(),
                     -Scalar::one(),
                     Scalar::zero(),
                     Scalar::zero(),
                 );
 
-                let a = product[j];
-                let b = o;
-                let o = self.cs.eval(&a) + self.cs.eval(&b);
-                let o = self.cs.add_input(o);
-                self.cs.add_gate(
-                    a,
-                    b,
+                self.push_pi(Scalar::zero());
+                product[j] = self.cs.add(
+                    product[j],
                     o,
                     Scalar::one(),
                     Scalar::one(),
@@ -77,8 +109,6 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
                     Scalar::zero(),
                     Scalar::zero(),
                 );
-
-                product[j] = o;
             }
         }
 
@@ -92,23 +122,21 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         let zero = self.cs.add_input(Scalar::zero());
 
         words.iter_mut().for_each(|w| {
-            let p = constants.next().cloned().unwrap_or_default();
+            let p = constants
+                .next()
+                .cloned()
+                .expect("Hades252 out of ARK constants");
 
-            let o = self.cs.eval(w) + p;
-            let o = self.cs.add_input(o);
-
-            self.cs.add_gate(
+            self.push_pi(p);
+            *w = self.cs.add(
                 *w,
                 zero,
-                o,
                 Scalar::one(),
-                Scalar::one(),
+                Scalar::zero(),
                 -Scalar::one(),
                 Scalar::zero(),
                 p,
             );
-
-            *w = o;
         });
     }
 }
@@ -129,6 +157,8 @@ mod tests {
     };
     use poly_commit::kzg10::{Powers, VerifierKey};
 
+    const TEST_PI_SIZE: usize = super::PI_SIZE + WIDTH + 3;
+
     fn perm(values: &mut [Scalar]) {
         let mut strategy = ScalarStrategy::new();
         strategy.perm(values);
@@ -138,7 +168,12 @@ mod tests {
         Transcript::new(b"hades-plonk")
     }
 
-    fn hades_gadget(composer: &mut StandardComposer<Curve>, x: Option<&[Scalar]>, h: &[Scalar]) {
+    fn hades_gadget(
+        composer: &mut StandardComposer<Curve>,
+        pi: &mut [Scalar],
+        x: Option<&[Scalar]>,
+        h: &[Scalar],
+    ) {
         let zero = composer.add_input(Scalar::zero());
         let mut x_var: Vec<Variable> = x
             .unwrap_or(&[Scalar::one(); WIDTH])
@@ -146,10 +181,19 @@ mod tests {
             .map(|s| composer.add_input(*s))
             .collect();
 
-        let mut strategy = GadgetStrategy::new(composer);
+        let pi_iter = pi.iter_mut();
+
+        let mut strategy = GadgetStrategy::new(composer, pi_iter);
         strategy.perm(x_var.as_mut_slice());
 
+        let (composer, mut pi_iter) = strategy.into_inner();
+
         x_var.iter().zip(h.iter()).for_each(|(a, b)| {
+            pi_iter
+                .next()
+                .map(|p| *p = *b)
+                .expect("Not enough public inputs");
+
             composer.add_gate(
                 *a,
                 zero,
@@ -162,37 +206,42 @@ mod tests {
             );
         });
 
-        composer.add_dummy_constraints();
-        composer.add_dummy_constraints();
-        composer.add_dummy_constraints();
+        (0..3).for_each(|_| {
+            pi_iter
+                .next()
+                .map(|p| *p = Scalar::zero())
+                .expect("Not enough public inputs");
+            composer.add_dummy_constraints();
+        });
     }
 
     fn circuit(
         domain: &EvaluationDomain<Scalar>,
         ck: &Powers<Curve>,
         h: &[Scalar],
-    ) -> (Transcript, PreProcessedCircuit<Curve>, Vec<Scalar>) {
+    ) -> (Transcript, PreProcessedCircuit<Curve>) {
         let mut transcript = gen_transcript();
         let mut composer: StandardComposer<Curve> = StandardComposer::new();
 
-        hades_gadget(&mut composer, None, h);
+        let mut pi = [Scalar::zero(); TEST_PI_SIZE];
+        hades_gadget(&mut composer, &mut pi, None, h);
 
-        let pi = composer.public_inputs().to_vec();
         let circuit = composer.preprocess(&ck, &mut transcript, &domain);
 
-        (transcript, circuit, pi)
+        (transcript, circuit)
     }
 
     fn prove(
         domain: &EvaluationDomain<Scalar>,
         ck: &Powers<Curve>,
+        pi: &mut [Scalar],
         x: &[Scalar],
         h: &[Scalar],
     ) -> Proof<Curve> {
         let mut transcript = gen_transcript();
         let mut composer: StandardComposer<Curve> = StandardComposer::new();
 
-        hades_gadget(&mut composer, Some(x), h);
+        hades_gadget(&mut composer, pi, Some(x), h);
 
         let preprocessed_circuit = composer.preprocess(&ck, &mut transcript, &domain);
         composer.prove(&ck, &preprocessed_circuit, &mut transcript)
@@ -217,9 +266,8 @@ mod tests {
         let mut e = [Scalar::from(5000u64); WIDTH];
         perm(&mut e);
 
-        let (transcript, circuit, mut pi) = circuit(&domain, &ck, &e);
-        let pi_h_from = pi.len() - 6 - WIDTH;
-        let pi_h_to = pi.len() - 6;
+        let mut pi = [Scalar::zero(); TEST_PI_SIZE];
+        let (transcript, circuit) = circuit(&domain, &ck, &e);
 
         let x_scalar = Scalar::from(31u64);
         let mut x = [Scalar::zero(); WIDTH];
@@ -235,27 +283,29 @@ mod tests {
         i.copy_from_slice(&y);
         perm(&mut i);
 
-        let proof = prove(&domain, &ck, &x, &h);
-        pi[pi_h_from..pi_h_to].copy_from_slice(&h);
+        let proof = prove(&domain, &ck, &mut pi, &x, &h);
         assert!(verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
 
-        let proof = prove(&domain, &ck, &y, &i);
-        pi[pi_h_from..pi_h_to].copy_from_slice(&i);
+        let proof = prove(&domain, &ck, &mut pi, &y, &i);
         assert!(verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
 
         // Wrong pre-image
-        let proof = prove(&domain, &ck, &y, &h);
-        pi[pi_h_from..pi_h_to].copy_from_slice(&h);
+        let proof = prove(&domain, &ck, &mut pi, &y, &h);
         assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
 
         // Wrong public image
-        let proof = prove(&domain, &ck, &x, &i);
-        pi[pi_h_from..pi_h_to].copy_from_slice(&i);
+        let proof = prove(&domain, &ck, &mut pi, &x, &i);
         assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
 
         // Inconsistent public image
-        let proof = prove(&domain, &ck, &x, &h);
-        pi[pi_h_from..pi_h_to].copy_from_slice(&i);
-        assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
+        let pi_i = pi;
+        let proof = prove(&domain, &ck, &mut pi, &x, &h);
+        assert!(!verify(
+            &mut transcript.clone(),
+            &circuit,
+            &vk,
+            &proof,
+            &pi_i
+        ));
     }
 }
