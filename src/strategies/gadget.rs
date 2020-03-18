@@ -34,47 +34,43 @@ where
         (self.cs, self.pi_iter)
     }
 
-    /// Perform the pre-image zk proof
+    /// Perform the hades permutation on a plonk circuit
     pub fn hades_gadget(
-        mut composer: StandardComposer<Curve>,
+        composer: StandardComposer<Curve>,
         pi: P,
-        x: Option<&[Scalar]>,
+        x: &mut [Variable],
+    ) -> (StandardComposer<Curve>, P) {
+        let mut strategy = GadgetStrategy::new(composer, pi);
+
+        strategy.perm(x);
+
+        strategy.into_inner()
+    }
+
+    /// Constrain x == h, being h a public input
+    pub fn constrain_gadget(
+        mut composer: StandardComposer<Curve>,
+        mut pi: P,
+        x: &[Variable],
         h: &[Scalar],
     ) -> (StandardComposer<Curve>, P) {
         let zero = composer.add_input(Scalar::zero());
-        let mut x_var: Vec<Variable> = x
-            .unwrap_or(&[Scalar::one(); WIDTH])
-            .iter()
-            .map(|s| composer.add_input(*s))
-            .collect();
 
-        let mut strategy = GadgetStrategy::new(composer, pi);
-        strategy.perm(x_var.as_mut_slice());
-
-        let (mut composer, mut pi) = strategy.into_inner();
-
-        x_var.iter().zip(h.iter()).for_each(|(a, b)| {
+        x.iter().zip(h.iter()).for_each(|(x, h)| {
             pi.next()
-                .map(|p| *p = *b)
-                .expect("Not enough public inputs");
+                .map(|s| *s = *h)
+                .expect("Public inputs iterator depleted");
 
             composer.add_gate(
-                *a,
+                *x,
                 zero,
                 zero,
                 -Scalar::one(),
                 Scalar::one(),
                 Scalar::one(),
                 Scalar::zero(),
-                *b,
+                *h,
             );
-        });
-
-        (0..3).for_each(|_| {
-            pi.next()
-                .map(|p| *p = Scalar::zero())
-                .expect("Not enough public inputs");
-            composer.add_dummy_constraints();
         });
 
         (composer, pi)
@@ -185,7 +181,10 @@ mod tests {
     use merlin::Transcript;
     use num_traits::Zero;
     use plonk::{
-        cs::{composer::StandardComposer, proof::Proof, Composer, PreProcessedCircuit},
+        cs::{
+            composer::StandardComposer, constraint_system::Variable, proof::Proof, Composer,
+            PreProcessedCircuit,
+        },
         srs,
     };
     use poly_commit::kzg10::{Powers, VerifierKey};
@@ -204,33 +203,49 @@ mod tests {
     fn circuit(
         domain: &EvaluationDomain<Scalar>,
         ck: &Powers<Curve>,
+        x: &[Scalar],
         h: &[Scalar],
-    ) -> (Transcript, PreProcessedCircuit<Curve>) {
+    ) -> (
+        Transcript,
+        PreProcessedCircuit<Curve>,
+        StandardComposer<Curve>,
+        [Scalar; TEST_PI_SIZE],
+    ) {
         let mut transcript = gen_transcript();
-        let composer: StandardComposer<Curve> = StandardComposer::new();
+        let mut composer: StandardComposer<Curve> = StandardComposer::new();
 
         let mut pi = [Scalar::zero(); TEST_PI_SIZE];
-        let (mut composer, _) = GadgetStrategy::hades_gadget(composer, pi.iter_mut(), None, h);
+        let mut x_var: [Variable; WIDTH] = unsafe { [std::mem::zeroed(); WIDTH] };
+        x.iter()
+            .zip(x_var.iter_mut())
+            .for_each(|(x, v)| *v = composer.add_input(*x));
+
+        let (composer, pi_iter) = GadgetStrategy::hades_gadget(composer, pi.iter_mut(), &mut x_var);
+        let (mut composer, mut pi_iter) =
+            GadgetStrategy::constrain_gadget(composer, pi_iter, &x_var, h);
+
+        (0..3).for_each(|_| {
+            pi_iter
+                .next()
+                .map(|s| *s = Scalar::zero())
+                .expect("Public inputs iterator depleted");
+
+            composer.add_dummy_constraints();
+        });
 
         let circuit = composer.preprocess(&ck, &mut transcript, &domain);
-
-        (transcript, circuit)
+        (transcript, circuit, composer, pi)
     }
 
     fn prove(
         domain: &EvaluationDomain<Scalar>,
         ck: &Powers<Curve>,
-        pi: &mut [Scalar],
         x: &[Scalar],
         h: &[Scalar],
-    ) -> Proof<Curve> {
-        let mut transcript = gen_transcript();
-        let composer: StandardComposer<Curve> = StandardComposer::new();
-
-        let (mut composer, _) = GadgetStrategy::hades_gadget(composer, pi.iter_mut(), Some(x), h);
-
-        let preprocessed_circuit = composer.preprocess(&ck, &mut transcript, &domain);
-        composer.prove(&ck, &preprocessed_circuit, &mut transcript)
+    ) -> (Proof<Curve>, [Scalar; TEST_PI_SIZE]) {
+        let (mut transcript, circuit, mut composer, pi) = circuit(domain, ck, x, h);
+        let proof = composer.prove(&ck, &circuit, &mut transcript);
+        (proof, pi)
     }
 
     fn verify(
@@ -249,11 +264,11 @@ mod tests {
         let (ck, vk) = srs::trim(&public_parameters, 4096).unwrap();
         let domain: EvaluationDomain<Scalar> = EvaluationDomain::new(4096).unwrap();
 
-        let mut e = [Scalar::from(5000u64); WIDTH];
-        perm(&mut e);
+        let e = [Scalar::from(5000u64); WIDTH];
+        let mut e_perm = [Scalar::from(5000u64); WIDTH];
+        perm(&mut e_perm);
 
-        let mut pi = [Scalar::zero(); TEST_PI_SIZE];
-        let (transcript, circuit) = circuit(&domain, &ck, &e);
+        let (transcript, circuit, _, _) = circuit(&domain, &ck, &e, &e_perm);
 
         let x_scalar = Scalar::from(31u64);
         let mut x = [Scalar::zero(); WIDTH];
@@ -269,29 +284,22 @@ mod tests {
         i.copy_from_slice(&y);
         perm(&mut i);
 
-        let proof = prove(&domain, &ck, &mut pi, &x, &h);
+        let (proof, pi) = prove(&domain, &ck, &x, &h);
         assert!(verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
 
-        let proof = prove(&domain, &ck, &mut pi, &y, &i);
+        let (proof, pi) = prove(&domain, &ck, &y, &i);
         assert!(verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
 
         // Wrong pre-image
-        let proof = prove(&domain, &ck, &mut pi, &y, &h);
+        let (proof, pi) = prove(&domain, &ck, &y, &h);
         assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
 
         // Wrong public image
-        let proof = prove(&domain, &ck, &mut pi, &x, &i);
+        let (proof, pi) = prove(&domain, &ck, &x, &i);
         assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
 
         // Inconsistent public image
-        let pi_i = pi;
-        let proof = prove(&domain, &ck, &mut pi, &x, &h);
-        assert!(!verify(
-            &mut transcript.clone(),
-            &circuit,
-            &vk,
-            &proof,
-            &pi_i
-        ));
+        let (proof, _) = prove(&domain, &ck, &x, &h);
+        assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
     }
 }
