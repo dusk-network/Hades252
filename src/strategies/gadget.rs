@@ -15,10 +15,7 @@ where
     P: Iterator<Item = &'a mut Scalar>,
 {
     /// A reference to the constraint system used by the gadgets
-    pub cs: &'a mut StandardComposer<Curve>,
-    /// Reference to the public inputs created by the gadget
-    pub pi: [Scalar; PI_SIZE],
-    pi_i: usize,
+    pub cs: StandardComposer<Curve>,
     /// Mutable iterator over the public inputs
     pub pi_iter: P,
 }
@@ -28,23 +25,62 @@ where
     P: Iterator<Item = &'a mut Scalar>,
 {
     /// Constructs a new `GadgetStrategy` with the constraint system.
-    pub fn new(cs: &'a mut StandardComposer<Curve>, pi_iter: P) -> Self {
-        GadgetStrategy {
-            cs,
-            pi: [Scalar::zero(); PI_SIZE],
-            pi_i: 0,
-            pi_iter,
-        }
+    pub fn new(cs: StandardComposer<Curve>, pi_iter: P) -> Self {
+        GadgetStrategy { cs, pi_iter }
     }
 
     /// Return the inner iterator over public inputs
-    pub fn into_inner(self) -> (&'a mut StandardComposer<Curve>, P) {
+    pub fn into_inner(self) -> (StandardComposer<Curve>, P) {
         (self.cs, self.pi_iter)
     }
 
+    /// Perform the pre-image zk proof
+    pub fn hades_gadget(
+        mut composer: StandardComposer<Curve>,
+        pi: P,
+        x: Option<&[Scalar]>,
+        h: &[Scalar],
+    ) -> (StandardComposer<Curve>, P) {
+        let zero = composer.add_input(Scalar::zero());
+        let mut x_var: Vec<Variable> = x
+            .unwrap_or(&[Scalar::one(); WIDTH])
+            .iter()
+            .map(|s| composer.add_input(*s))
+            .collect();
+
+        let mut strategy = GadgetStrategy::new(composer, pi);
+        strategy.perm(x_var.as_mut_slice());
+
+        let (mut composer, mut pi) = strategy.into_inner();
+
+        x_var.iter().zip(h.iter()).for_each(|(a, b)| {
+            pi.next()
+                .map(|p| *p = *b)
+                .expect("Not enough public inputs");
+
+            composer.add_gate(
+                *a,
+                zero,
+                zero,
+                -Scalar::one(),
+                Scalar::one(),
+                Scalar::one(),
+                Scalar::zero(),
+                *b,
+            );
+        });
+
+        (0..3).for_each(|_| {
+            pi.next()
+                .map(|p| *p = Scalar::zero())
+                .expect("Not enough public inputs");
+            composer.add_dummy_constraints();
+        });
+
+        (composer, pi)
+    }
+
     fn push_pi(&mut self, p: Scalar) {
-        self.pi[self.pi_i] = p;
-        self.pi_i += 1;
         self.pi_iter
             .next()
             .map(|s| *s = p)
@@ -147,12 +183,9 @@ mod tests {
 
     use ff_fft::EvaluationDomain;
     use merlin::Transcript;
-    use num_traits::{One, Zero};
+    use num_traits::Zero;
     use plonk::{
-        cs::{
-            composer::StandardComposer, constraint_system::Variable, proof::Proof, Composer,
-            PreProcessedCircuit,
-        },
+        cs::{composer::StandardComposer, proof::Proof, Composer, PreProcessedCircuit},
         srs,
     };
     use poly_commit::kzg10::{Powers, VerifierKey};
@@ -168,63 +201,16 @@ mod tests {
         Transcript::new(b"hades-plonk")
     }
 
-    fn hades_gadget(
-        composer: &mut StandardComposer<Curve>,
-        pi: &mut [Scalar],
-        x: Option<&[Scalar]>,
-        h: &[Scalar],
-    ) {
-        let zero = composer.add_input(Scalar::zero());
-        let mut x_var: Vec<Variable> = x
-            .unwrap_or(&[Scalar::one(); WIDTH])
-            .iter()
-            .map(|s| composer.add_input(*s))
-            .collect();
-
-        let pi_iter = pi.iter_mut();
-
-        let mut strategy = GadgetStrategy::new(composer, pi_iter);
-        strategy.perm(x_var.as_mut_slice());
-
-        let (composer, mut pi_iter) = strategy.into_inner();
-
-        x_var.iter().zip(h.iter()).for_each(|(a, b)| {
-            pi_iter
-                .next()
-                .map(|p| *p = *b)
-                .expect("Not enough public inputs");
-
-            composer.add_gate(
-                *a,
-                zero,
-                zero,
-                -Scalar::one(),
-                Scalar::one(),
-                Scalar::one(),
-                Scalar::zero(),
-                *b,
-            );
-        });
-
-        (0..3).for_each(|_| {
-            pi_iter
-                .next()
-                .map(|p| *p = Scalar::zero())
-                .expect("Not enough public inputs");
-            composer.add_dummy_constraints();
-        });
-    }
-
     fn circuit(
         domain: &EvaluationDomain<Scalar>,
         ck: &Powers<Curve>,
         h: &[Scalar],
     ) -> (Transcript, PreProcessedCircuit<Curve>) {
         let mut transcript = gen_transcript();
-        let mut composer: StandardComposer<Curve> = StandardComposer::new();
+        let composer: StandardComposer<Curve> = StandardComposer::new();
 
         let mut pi = [Scalar::zero(); TEST_PI_SIZE];
-        hades_gadget(&mut composer, &mut pi, None, h);
+        let (mut composer, _) = GadgetStrategy::hades_gadget(composer, pi.iter_mut(), None, h);
 
         let circuit = composer.preprocess(&ck, &mut transcript, &domain);
 
@@ -239,9 +225,9 @@ mod tests {
         h: &[Scalar],
     ) -> Proof<Curve> {
         let mut transcript = gen_transcript();
-        let mut composer: StandardComposer<Curve> = StandardComposer::new();
+        let composer: StandardComposer<Curve> = StandardComposer::new();
 
-        hades_gadget(&mut composer, pi, Some(x), h);
+        let (mut composer, _) = GadgetStrategy::hades_gadget(composer, pi.iter_mut(), Some(x), h);
 
         let preprocessed_circuit = composer.preprocess(&ck, &mut transcript, &domain);
         composer.prove(&ck, &preprocessed_circuit, &mut transcript)
