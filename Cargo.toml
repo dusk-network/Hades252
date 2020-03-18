@@ -15,7 +15,7 @@ num-traits = "0.2"
 
 [dependencies.plonk]
 git = "https://github.com/dusk-network/plonk"
-branch = "vlopes11/fast_prover_zexe"
+branch = "fast_prover_zexe"
 
 [dev-dependencies]
 rand = "0.7"
