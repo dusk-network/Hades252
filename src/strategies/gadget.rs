@@ -245,9 +245,9 @@ mod tests {
 
     #[test]
     fn hades_preimage() {
-        let public_parameters = srs::setup(8192, &mut rand::thread_rng());
-        let (ck, vk) = srs::trim(&public_parameters, 8192).unwrap();
-        let domain: EvaluationDomain<Scalar> = EvaluationDomain::new(4100).unwrap();
+        let public_parameters = srs::setup(4096, &mut rand::thread_rng());
+        let (ck, vk) = srs::trim(&public_parameters, 4096).unwrap();
+        let domain: EvaluationDomain<Scalar> = EvaluationDomain::new(4096).unwrap();
 
         let mut e = [Scalar::from(5000u64); WIDTH];
         perm(&mut e);
