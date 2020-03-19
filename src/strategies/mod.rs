@@ -3,10 +3,10 @@
 //! Rank 1 Constraint Systems (R1CS).
 //!
 //! The inputs of the permutation function have to be explicitly
-//! over the DalekScalar Field of the curve25519 so working over
+//! over the Fq Field of the curve25519 so working over
 //! `Fp = 2^252 + 27742317777372353535851937790883648493`.
 
-use crate::{round_constants::ROUND_CONSTANTS, Scalar, PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS};
+use crate::{round_constants::ROUND_CONSTANTS, Fq, PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS};
 
 pub use gadget::GadgetStrategy;
 pub use scalar::ScalarStrategy;
@@ -18,7 +18,7 @@ pub mod gadget;
 pub mod scalar;
 
 /// Defines the Hades252 strategy algorithm.
-pub trait Strategy<T> {
+pub trait Strategy<T: Clone> {
     /// Computes `input ^ 5 (mod Fp)`
     ///
     /// The modulo depends on the input you use. In our case
@@ -38,7 +38,7 @@ pub trait Strategy<T> {
     /// inputs and the outputs of the function.
     fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [T])
     where
-        I: Iterator<Item = &'b Scalar>;
+        I: Iterator<Item = &'b Fq>;
 
     /// Applies a `Partial Round` also known as a
     /// `Partial S-Box layer` to a set of inputs.
@@ -54,7 +54,7 @@ pub trait Strategy<T> {
     /// This is known as the `Mix Layer`.
     fn apply_partial_round<'b, I>(&mut self, constants: &mut I, words: &mut [T])
     where
-        I: Iterator<Item = &'b Scalar>,
+        I: Iterator<Item = &'b Fq>,
     {
         // Add round keys to each word
         self.add_round_key(constants, words);
@@ -81,7 +81,7 @@ pub trait Strategy<T> {
     /// This is known as the `Mix Layer`.
     fn apply_full_round<'a, I>(&mut self, constants: &mut I, words: &mut [T])
     where
-        I: Iterator<Item = &'a Scalar>,
+        I: Iterator<Item = &'a Fq>,
     {
         // Add round keys to each word
         self.add_round_key(constants, words);
@@ -129,5 +129,11 @@ pub trait Strategy<T> {
         for _ in 0..TOTAL_FULL_ROUNDS / 2 {
             self.apply_full_round(&mut constants_iter, data);
         }
+    }
+
+    /// Perform a poseidon hash
+    fn poseidon(&mut self, data: &mut [T]) -> T {
+        self.perm(data);
+        data[1].clone()
     }
 }

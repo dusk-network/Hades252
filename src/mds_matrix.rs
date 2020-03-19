@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-use crate::{Scalar, WIDTH};
+use crate::{Fq, WIDTH};
 
 use algebra::biginteger::BigInteger256;
 use lazy_static::lazy_static;
@@ -12,9 +12,9 @@ lazy_static! {
   ///
   /// This matrix is loaded from the `mds.bin` file where
   /// is pre-computed and represented in bytes.
-  pub static ref MDS_MATRIX: [[Scalar; WIDTH]; WIDTH] = {
+  pub static ref MDS_MATRIX: [[Fq; WIDTH]; WIDTH] = {
       let bytes = include_bytes!("../assets/mds.bin");
-      let mut mds = [[Scalar::zero(); WIDTH]; WIDTH];
+      let mut mds = [[Fq::zero(); WIDTH]; WIDTH];
       let mut k = 0;
       let mut a = [0x00u8; 8];
       let mut b = [0x00u8; 8];
@@ -29,7 +29,7 @@ lazy_static! {
               d.copy_from_slice(&bytes[k+24..k+32]);
               k += 32;
 
-              mds[i][j] = Scalar::from(BigInteger256([
+              mds[i][j] = Fq::from(BigInteger256([
                       u64::from_le_bytes(a),
                       u64::from_le_bytes(b),
                       u64::from_le_bytes(c),
