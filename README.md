@@ -47,12 +47,12 @@ where each full round has `WIDTH` quintic S-Boxes.
 
 ## Example with permutation of scalars
 ```
-use hades252::{Scalar, ScalarStrategy, Strategy};
+use hades252::{Fq, ScalarStrategy, Strategy};
 
 // Generate the inputs that will permute.
 // The number of values we can input is equivalent to `WIDTH`
 
-let input = vec![Scalar::from(1u64); hades252::WIDTH];
+let input = vec![Fq::from(1u64); hades252::WIDTH];
 let mut strategy = ScalarStrategy::new();
 
 let mut output = input.clone();

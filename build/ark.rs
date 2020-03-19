@@ -1,4 +1,4 @@
-use super::Scalar;
+use super::Fq;
 use std::{cmp, fs::File, io::prelude::*};
 
 use algebra::biginteger::BigInteger256;
@@ -16,12 +16,12 @@ fn slice_to_u64(bytes: &[u8]) -> u64 {
     u64::from_be_bytes(s)
 }
 
-fn constants() -> [Scalar; 960] {
+fn constants() -> [Fq; 960] {
     // TODO - Review constants generation
-    let mut cnst = [Scalar::zero(); 960];
-    let mut p = Scalar::one();
+    let mut cnst = [Fq::zero(); 960];
+    let mut p = Fq::one();
     let mut bytes = b"poseidon-for-plonk".to_vec();
-    let two = Scalar::from(2u64);
+    let two = Fq::from(2u64);
 
     (0..CONSTANTS).for_each(|i| {
         let mut hasher = Sha512::new();
@@ -35,7 +35,7 @@ fn constants() -> [Scalar; 960] {
         let b = slice_to_u64(&bytes[8..]);
         let c = slice_to_u64(&bytes[16..]);
         let d = slice_to_u64(&bytes[24..]);
-        let s = Scalar::from(BigInteger256([a, b, c, d]));
+        let s = Fq::from(BigInteger256([a, b, c, d]));
 
         cnst[i] = s + p / two;
         p = cnst[i];
