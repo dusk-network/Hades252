@@ -141,17 +141,11 @@ where
         for j in 0..WIDTH {
             for k in 0..WIDTH {
                 self.push_pi(Fq::zero());
-                let a = self.cs.add_input(MDS_MATRIX[j][k]);
-                let o = self
-                    .cs
-                    .mul(a, values[k], Fq::one(), -Fq::one(), Fq::zero(), Fq::zero());
-
-                self.push_pi(Fq::zero());
                 product[j] = self.cs.add(
                     product[j],
-                    o,
+                    values[k],
                     Fq::one(),
-                    Fq::one(),
+                    MDS_MATRIX[j][k],
                     -Fq::one(),
                     Fq::zero(),
                     Fq::zero(),
@@ -174,10 +168,10 @@ where
                 .cloned()
                 .expect("Hades252 out of ARK constants");
 
-            self.push_pi(p);
+            self.push_pi(Fq::zero());
             *w = self
                 .cs
-                .add(*w, zero, Fq::one(), Fq::zero(), -Fq::one(), Fq::zero(), p);
+                .add(*w, zero, Fq::one(), Fq::zero(), -Fq::one(), p, Fq::zero());
         });
     }
 
@@ -292,9 +286,11 @@ mod tests {
 
     #[test]
     fn hades_preimage() {
-        let public_parameters = srs::setup(4096, &mut rand::thread_rng());
-        let (ck, vk) = srs::trim(&public_parameters, 4096).unwrap();
-        let domain: EvaluationDomain<Fq> = EvaluationDomain::new(4096).unwrap();
+        const CAPACITY: usize = 4096;
+
+        let public_parameters = srs::setup(CAPACITY, &mut rand::thread_rng());
+        let (ck, vk) = srs::trim(&public_parameters, CAPACITY).unwrap();
+        let domain: EvaluationDomain<Fq> = EvaluationDomain::new(CAPACITY).unwrap();
 
         let e = [Fq::from(5000u64); WIDTH];
         let mut e_perm = [Fq::from(5000u64); WIDTH];
