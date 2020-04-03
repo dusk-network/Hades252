@@ -57,6 +57,21 @@ where
         (composer, pi, x[1])
     }
 
+    /// Perform the poseidon slice hash on a plonk circuit
+    pub fn poseidon_slice_gadget(
+        composer: StandardComposer<Bls12_381>,
+        pi: P,
+        x: &[Variable],
+    ) -> (StandardComposer<Bls12_381>, P, Variable) {
+        let mut strategy = GadgetStrategy::new(composer, pi);
+
+        let x = strategy.poseidon_slice(x);
+
+        let (composer, pi) = strategy.into_inner();
+
+        (composer, pi, x)
+    }
+
     /// Constrain x == h, being h a public input
     pub fn constrain_gadget(
         mut composer: StandardComposer<Bls12_381>,
@@ -165,6 +180,30 @@ where
                 .add(*w, zero, Fq::one(), Fq::zero(), -Fq::one(), Fq::zero(), p);
         });
     }
+
+    /// Perform a slice strategy
+    fn poseidon_slice(&mut self, data: &[Variable]) -> Variable {
+        let zero = self.cs.add_input(Fq::zero());
+        let mut perm = [zero; WIDTH];
+
+        let mut elements = [zero; WIDTH - 2];
+        elements
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, e)| *e = self.cs.add_input(Fq::from((i + 1) as u8)));
+
+        data.chunks(WIDTH - 2).fold(zero, |r, chunk| {
+            perm[0] = elements[chunk.len() - 1];
+            perm[1] = r;
+
+            chunk
+                .iter()
+                .zip(perm.iter_mut().skip(2))
+                .for_each(|(c, p)| *p = *c);
+
+            self.poseidon(&mut perm)
+        })
+    }
 }
 
 #[cfg(test)]
@@ -173,15 +212,14 @@ mod tests {
 
     use ff_fft::EvaluationDomain;
     use merlin::Transcript;
-    use num_traits::Zero;
-    use plonk::{
-        cs::{
-            composer::StandardComposer, constraint_system::Variable, proof::Proof, Composer,
-            PreProcessedCircuit,
-        },
-        srs,
-    };
+    use num_traits::{One, Zero};
+    use plonk::cs::composer::StandardComposer;
+    use plonk::cs::constraint_system::Variable;
+    use plonk::cs::proof::Proof;
+    use plonk::cs::{Composer, PreProcessedCircuit};
+    use plonk::srs;
     use poly_commit::kzg10::{Powers, VerifierKey};
+    use rand::Rng;
 
     const TEST_PI_SIZE: usize = super::PI_SIZE + WIDTH + 3;
 
@@ -295,5 +333,81 @@ mod tests {
         // Inconsistent public image
         let (proof, _) = prove(&domain, &ck, &x, &h);
         assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
+    }
+
+    #[test]
+    fn poseidon_slice() {
+        let public_parameters = srs::setup(4096 * 32, &mut rand::thread_rng());
+        let (ck, vk) = srs::trim(&public_parameters, 4096 * 32).unwrap();
+        let domain: EvaluationDomain<Fq> = EvaluationDomain::new(4096 * 32).unwrap();
+
+        // Generate circuit
+        let mut base_transcript = gen_transcript();
+        let mut composer: StandardComposer<Bls12_381> = StandardComposer::new();
+
+        let mut pi = vec![Fq::zero(); TEST_PI_SIZE * 250];
+
+        let data: Vec<Fq> = (0..WIDTH * 20 - 19)
+            .map(|_| (&mut rand::thread_rng()).gen())
+            .collect();
+        let result = ScalarStrategy::new().poseidon_slice(data.as_slice());
+        let result = composer.add_input(result);
+
+        let vars: Vec<Variable> = data.iter().map(|d| composer.add_input(*d)).collect();
+        let (mut composer, _, x) =
+            GadgetStrategy::poseidon_slice_gadget(composer, pi.iter_mut(), &vars);
+
+        let zero = composer.add_input(Fq::zero());
+        composer.add_gate(
+            result,
+            x,
+            zero,
+            -Fq::one(),
+            Fq::one(),
+            Fq::one(),
+            Fq::zero(),
+            Fq::zero(),
+        );
+
+        composer.add_dummy_constraints();
+
+        let preprocessed_circuit = composer.preprocess(&ck, &mut base_transcript, &domain);
+
+        // Prove
+        let mut transcript = gen_transcript();
+        let mut composer: StandardComposer<Bls12_381> = StandardComposer::new();
+
+        let mut pi = vec![Fq::zero(); TEST_PI_SIZE * 250];
+
+        let data: Vec<Fq> = (0..WIDTH * 20 - 19)
+            .map(|_| (&mut rand::thread_rng()).gen())
+            .collect();
+        let result = ScalarStrategy::new().poseidon_slice(data.as_slice());
+        let result = composer.add_input(result);
+
+        let vars: Vec<Variable> = data.iter().map(|d| composer.add_input(*d)).collect();
+        let (mut composer, _, x) =
+            GadgetStrategy::poseidon_slice_gadget(composer, pi.iter_mut(), &vars);
+
+        let zero = composer.add_input(Fq::zero());
+        composer.add_gate(
+            result,
+            x,
+            zero,
+            -Fq::one(),
+            Fq::one(),
+            Fq::one(),
+            Fq::zero(),
+            Fq::zero(),
+        );
+
+        composer.add_dummy_constraints();
+
+        let circuit = composer.preprocess(&ck, &mut transcript, &domain);
+        let proof = composer.prove(&ck, &circuit, &mut transcript);
+
+        // Verify
+        let mut transcript = base_transcript.clone();
+        assert!(proof.verify(&preprocessed_circuit, &mut transcript, &vk, &pi));
     }
 }

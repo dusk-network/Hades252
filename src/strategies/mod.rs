@@ -136,4 +136,7 @@ pub trait Strategy<T: Clone> {
         self.perm(data);
         data[1].clone()
     }
+
+    /// Perform a slice strategy
+    fn poseidon_slice(&mut self, data: &[T]) -> T;
 }
