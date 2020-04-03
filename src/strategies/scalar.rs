@@ -2,7 +2,7 @@ use crate::{mds_matrix::MDS_MATRIX, Fq, WIDTH};
 
 use super::Strategy;
 
-use num_traits::One;
+use num_traits::{One, Zero};
 
 /// Implements a Hades252 strategy for `Fq` as input values.
 #[derive(Default)]
@@ -41,6 +41,23 @@ impl Strategy<Fq> for ScalarStrategy {
         words.iter_mut().for_each(|w| {
             *w += constants.next().unwrap_or(&Fq::one());
         });
+    }
+
+    /// Perform a slice strategy
+    fn poseidon_slice(&mut self, data: &[Fq]) -> Fq {
+        let mut perm = [Fq::zero(); WIDTH];
+
+        data.chunks(WIDTH - 2).fold(Fq::zero(), |r, chunk| {
+            perm[0] = Fq::from(chunk.len() as u64);
+            perm[1] = r;
+
+            chunk
+                .iter()
+                .zip(perm.iter_mut().skip(2))
+                .for_each(|(c, p)| *p = *c);
+
+            self.poseidon(&mut perm)
+        })
     }
 }
 
