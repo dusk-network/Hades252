@@ -27,7 +27,7 @@ impl Strategy<Fq> for ScalarStrategy {
 
         for j in 0..WIDTH {
             for k in 0..WIDTH {
-                result[j] += MDS_MATRIX[j][k] * values[k];
+                result[k] += MDS_MATRIX[k][j] * values[j];
             }
         }
 
