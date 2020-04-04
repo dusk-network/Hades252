@@ -4,6 +4,9 @@ use crate::{mds_matrix::MDS_MATRIX, Bls12_381, Fq, PARTIAL_ROUNDS, TOTAL_FULL_RO
 use num_traits::{One, Zero};
 use plonk::cs::{composer::StandardComposer, constraint_system::Variable};
 
+#[cfg(feature = "trace")]
+use {plonk::cs::Composer, tracing::trace};
+
 /// Size of the generated public inputs for the permutation gadget
 pub const PI_SIZE: usize =
     WIDTH * (TOTAL_FULL_ROUNDS + PARTIAL_ROUNDS) + 65 * TOTAL_FULL_ROUNDS + 53 * PARTIAL_ROUNDS;
@@ -40,9 +43,21 @@ where
         pi: P,
         x: &mut [Variable],
     ) -> (StandardComposer<Bls12_381>, P) {
+        #[cfg(feature = "trace")]
+        let circuit_size = composer.circuit_size();
+
         let mut strategy = GadgetStrategy::new(composer, pi);
 
         strategy.perm(x);
+
+        #[cfg(feature = "trace")]
+        {
+            trace!(
+                "Hades permutation performed with {} constraints for {} bits",
+                strategy.cs.circuit_size() - circuit_size,
+                WIDTH
+            );
+        }
 
         strategy.into_inner()
     }
@@ -114,6 +129,9 @@ where
     P: Iterator<Item = &'a mut Fq>,
 {
     fn quintic_s_box(&mut self, value: &mut Variable) {
+        #[cfg(feature = "trace")]
+        let circuit_size = self.cs.circuit_size();
+
         let v = *value;
 
         (0..2).for_each(|_| {
@@ -132,20 +150,32 @@ where
         *value = self
             .cs
             .mul(*value, v, Fq::one(), -Fq::one(), Fq::zero(), Fq::zero());
+
+        #[cfg(feature = "trace")]
+        {
+            trace!(
+                "Hades quintic S-Box performed with {} constraints for {} bits",
+                self.cs.circuit_size() - circuit_size,
+                WIDTH
+            );
+        }
     }
 
     fn mul_matrix(&mut self, values: &mut [Variable]) {
+        #[cfg(feature = "trace")]
+        let circuit_size = self.cs.circuit_size();
+
         let zero = self.cs.add_input(Fq::zero());
         let mut product = [zero; WIDTH];
 
         for j in 0..WIDTH {
             for k in 0..WIDTH {
                 self.push_pi(Fq::zero());
-                product[j] = self.cs.add(
-                    product[j],
-                    values[k],
+                product[k] = self.cs.add(
+                    product[k],
+                    values[j],
                     Fq::one(),
-                    MDS_MATRIX[j][k],
+                    MDS_MATRIX[k][j],
                     -Fq::one(),
                     Fq::zero(),
                     Fq::zero(),
@@ -154,12 +184,24 @@ where
         }
 
         values.copy_from_slice(&product);
+
+        #[cfg(feature = "trace")]
+        {
+            trace!(
+                "Hades MDS multiplication performed with {} constraints for {} bits",
+                self.cs.circuit_size() - circuit_size,
+                WIDTH
+            );
+        }
     }
 
     fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [Variable])
     where
         I: Iterator<Item = &'b Fq>,
     {
+        #[cfg(feature = "trace")]
+        let circuit_size = self.cs.circuit_size();
+
         let zero = self.cs.add_input(Fq::zero());
 
         words.iter_mut().for_each(|w| {
@@ -173,6 +215,15 @@ where
                 .cs
                 .add(*w, zero, Fq::one(), Fq::zero(), -Fq::one(), p, Fq::zero());
         });
+
+        #[cfg(feature = "trace")]
+        {
+            trace!(
+                "Hades ARK performed with {} constraints for {} bits",
+                self.cs.circuit_size() - circuit_size,
+                WIDTH
+            );
+        }
     }
 
     /// Perform a slice strategy
