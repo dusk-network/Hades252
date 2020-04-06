@@ -6,7 +6,9 @@
 //! over the Fq Field of the curve25519 so working over
 //! `Fp = 2^252 + 27742317777372353535851937790883648493`.
 
-use crate::{round_constants::ROUND_CONSTANTS, Fq, PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS};
+use crate::{round_constants::ROUND_CONSTANTS, Fq, PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS, WIDTH};
+
+use num_traits::Zero;
 
 pub use gadget::GadgetStrategy;
 pub use scalar::ScalarStrategy;
@@ -28,6 +30,13 @@ pub trait Strategy<T: Clone> {
 
     /// Multiply the values for MDS matrix.
     fn mul_matrix(&mut self, values: &mut [T]);
+
+    /// Multiply the values for MDS matrix.
+    fn mul_matrix_partial_round(&mut self, constants: &[Fq], values: &mut [T]) {
+        let size = values.len() - 1;
+        self.add_round_key(&mut constants.iter(), &mut values[0..size]);
+        self.mul_matrix(values);
+    }
 
     /// Add round keys to a set of `StrategyInput`.
     ///
@@ -56,15 +65,24 @@ pub trait Strategy<T: Clone> {
     where
         I: Iterator<Item = &'b Fq>,
     {
+        let mut cnst = [Fq::zero(); WIDTH];
+        cnst.iter_mut().take(WIDTH - 1).for_each(|c| {
+            *c = constants
+                .next()
+                .cloned()
+                .expect("Hades252 out of ARK constants")
+        });
+
+        let last = words.len() - 1;
+
         // Add round keys to each word
-        self.add_round_key(constants, words);
+        self.add_round_key(constants, &mut words[last..last + 1]);
 
         // Then apply quintic s-box
-        let last = words.len() - 1;
         self.quintic_s_box(&mut words[last]);
 
         // Multiply this result by the MDS matrix
-        self.mul_matrix(words);
+        self.mul_matrix_partial_round(&cnst, words);
     }
 
     /// Applies a `Full Round` also known as a
