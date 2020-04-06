@@ -8,8 +8,8 @@ use plonk::cs::{composer::StandardComposer, constraint_system::Variable};
 use {plonk::cs::Composer, tracing::trace};
 
 /// Size of the generated public inputs for the permutation gadget
-pub const PI_SIZE: usize =
-    WIDTH * (TOTAL_FULL_ROUNDS + PARTIAL_ROUNDS) + 65 * TOTAL_FULL_ROUNDS + 53 * PARTIAL_ROUNDS;
+pub const PI_SIZE: usize = 4 * (TOTAL_FULL_ROUNDS * WIDTH + PARTIAL_ROUNDS)
+    + (WIDTH * WIDTH) * (TOTAL_FULL_ROUNDS + PARTIAL_ROUNDS);
 
 /// Implements a Hades252 strategy for `Variable` as input values.
 /// Requires a reference to a `ConstraintSystem`.
@@ -17,10 +17,14 @@ pub struct GadgetStrategy<'a, P>
 where
     P: Iterator<Item = &'a mut Fq>,
 {
+    /// Counter over pushed PI
+    pub pi_len: usize,
     /// A reference to the constraint system used by the gadgets
     pub cs: StandardComposer<Bls12_381>,
     /// Mutable iterator over the public inputs
     pub pi_iter: P,
+    /// Variable representing zero
+    pub zero: Variable,
 }
 
 impl<'a, P> GadgetStrategy<'a, P>
@@ -28,8 +32,14 @@ where
     P: Iterator<Item = &'a mut Fq>,
 {
     /// Constructs a new `GadgetStrategy` with the constraint system.
-    pub fn new(cs: StandardComposer<Bls12_381>, pi_iter: P) -> Self {
-        GadgetStrategy { cs, pi_iter }
+    pub fn new(mut cs: StandardComposer<Bls12_381>, pi_iter: P) -> Self {
+        let zero = cs.add_input(Fq::zero());
+        GadgetStrategy {
+            pi_len: 0,
+            cs,
+            pi_iter,
+            zero,
+        }
     }
 
     /// Return the inner iterator over public inputs
@@ -117,6 +127,7 @@ where
     }
 
     fn push_pi(&mut self, p: Fq) {
+        self.pi_len += 1;
         self.pi_iter
             .next()
             .map(|s| *s = p)
@@ -165,8 +176,7 @@ where
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();
 
-        let zero = self.cs.add_input(Fq::zero());
-        let mut product = [zero; WIDTH];
+        let mut product = [self.zero; WIDTH];
 
         for j in 0..WIDTH {
             for k in 0..WIDTH {
@@ -195,14 +205,46 @@ where
         }
     }
 
+    /// Multiply the values for MDS matrix.
+    fn mul_matrix_partial_round(&mut self, constants: &[Fq], values: &mut [Variable]) {
+        #[cfg(feature = "trace")]
+        let circuit_size = self.cs.circuit_size();
+
+        let mut product = [self.zero; WIDTH];
+
+        for j in 0..WIDTH {
+            for k in 0..WIDTH {
+                self.push_pi(Fq::zero());
+                product[k] = self.cs.add(
+                    product[k],
+                    values[j],
+                    Fq::one(),
+                    MDS_MATRIX[k][j],
+                    -Fq::one(),
+                    constants[j] * MDS_MATRIX[k][j],
+                    Fq::zero(),
+                );
+            }
+        }
+
+        values.copy_from_slice(&product);
+
+        #[cfg(feature = "trace")]
+        {
+            trace!(
+                "Hades MDS multiplication performed with {} constraints for {} bits",
+                self.cs.circuit_size() - circuit_size,
+                WIDTH
+            );
+        }
+    }
+
     fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [Variable])
     where
         I: Iterator<Item = &'b Fq>,
     {
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();
-
-        let zero = self.cs.add_input(Fq::zero());
 
         words.iter_mut().for_each(|w| {
             let p = constants
@@ -211,9 +253,15 @@ where
                 .expect("Hades252 out of ARK constants");
 
             self.push_pi(Fq::zero());
-            *w = self
-                .cs
-                .add(*w, zero, Fq::one(), Fq::zero(), -Fq::one(), p, Fq::zero());
+            *w = self.cs.add(
+                *w,
+                self.zero,
+                Fq::one(),
+                Fq::zero(),
+                -Fq::one(),
+                p,
+                Fq::zero(),
+            );
         });
 
         #[cfg(feature = "trace")]
@@ -228,16 +276,15 @@ where
 
     /// Perform a slice strategy
     fn poseidon_slice(&mut self, data: &[Variable]) -> Variable {
-        let zero = self.cs.add_input(Fq::zero());
-        let mut perm = [zero; WIDTH];
+        let mut perm = [self.zero; WIDTH];
 
-        let mut elements = [zero; WIDTH - 2];
+        let mut elements = [self.zero; WIDTH - 2];
         elements
             .iter_mut()
             .enumerate()
             .for_each(|(i, e)| *e = self.cs.add_input(Fq::from((i + 1) as u8)));
 
-        data.chunks(WIDTH - 2).fold(zero, |r, chunk| {
+        data.chunks(WIDTH - 2).fold(self.zero, |r, chunk| {
             perm[0] = elements[chunk.len() - 1];
             perm[1] = r;
 
@@ -392,11 +439,12 @@ mod tests {
         let mut base_transcript = gen_transcript();
         let mut composer: StandardComposer<Bls12_381> = StandardComposer::new();
 
-        let mut pi = vec![Fq::zero(); TEST_PI_SIZE * 250];
+        const BITS: usize = WIDTH * 20 - 19;
+        const SLICE_PI_SIZE: usize = super::PI_SIZE * (1 + BITS / 2);
 
-        let data: Vec<Fq> = (0..WIDTH * 20 - 19)
-            .map(|_| (&mut rand::thread_rng()).gen())
-            .collect();
+        let mut pi = vec![Fq::zero(); SLICE_PI_SIZE];
+
+        let data: Vec<Fq> = (0..BITS).map(|_| (&mut rand::thread_rng()).gen()).collect();
         let result = ScalarStrategy::new().poseidon_slice(data.as_slice());
         let result = composer.add_input(result);
 
@@ -424,11 +472,9 @@ mod tests {
         let mut transcript = gen_transcript();
         let mut composer: StandardComposer<Bls12_381> = StandardComposer::new();
 
-        let mut pi = vec![Fq::zero(); TEST_PI_SIZE * 250];
+        let mut pi = vec![Fq::zero(); SLICE_PI_SIZE];
 
-        let data: Vec<Fq> = (0..WIDTH * 20 - 19)
-            .map(|_| (&mut rand::thread_rng()).gen())
-            .collect();
+        let data: Vec<Fq> = (0..BITS).map(|_| (&mut rand::thread_rng()).gen()).collect();
         let result = ScalarStrategy::new().poseidon_slice(data.as_slice());
         let result = composer.add_input(result);
 
