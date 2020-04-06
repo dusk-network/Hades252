@@ -23,7 +23,7 @@ impl Strategy<Fq> for ScalarStrategy {
     }
 
     fn mul_matrix(&mut self, values: &mut [Fq]) {
-        let mut result = [Fq::from(0u64); WIDTH];
+        let mut result = [Fq::zero(); WIDTH];
 
         for j in 0..WIDTH {
             for k in 0..WIDTH {
