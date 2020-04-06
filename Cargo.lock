@@ -398,7 +398,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "plonk"
 version = "0.1.0"
-source = "git+https://github.com/dusk-network/plonk?branch=fast_prover_zexe#31e49fd9c96546fb7f47730f42a7dd38b979ad2a"
+source = "git+https://github.com/dusk-network/plonk?branch=fast_prover_zexe#9eb65ccf730193af450fbe9fb16cb983a651063e"
 dependencies = [
  "algebra 0.1.0 (git+https://github.com/scipr-lab/zexe/)",
  "bench-utils 0.1.0 (git+https://github.com/scipr-lab/zexe/)",
