@@ -1,5 +1,5 @@
 use super::Strategy;
-use crate::{mds_matrix::MDS_MATRIX, Bls12_381, Fq, PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS, WIDTH};
+use crate::{mds_matrix::MDS_MATRIX, Bls12_381, Fq, WIDTH};
 
 use num_traits::{One, Zero};
 use plonk::cs::{composer::StandardComposer, constraint_system::Variable};
@@ -8,8 +8,7 @@ use plonk::cs::{composer::StandardComposer, constraint_system::Variable};
 use {plonk::cs::Composer, tracing::trace};
 
 /// Size of the generated public inputs for the permutation gadget
-pub const PI_SIZE: usize = 4 * (TOTAL_FULL_ROUNDS * WIDTH + PARTIAL_ROUNDS)
-    + (WIDTH * WIDTH) * (TOTAL_FULL_ROUNDS + PARTIAL_ROUNDS);
+pub const PI_SIZE: usize = 1736;
 
 /// Implements a Hades252 strategy for `Variable` as input values.
 /// Requires a reference to a `ConstraintSystem`.
@@ -177,19 +176,73 @@ where
         let circuit_size = self.cs.circuit_size();
 
         let mut product = [self.zero; WIDTH];
+        let mut z3 = self.zero;
 
         for j in 0..WIDTH {
-            for k in 0..WIDTH {
+            for k in 0..WIDTH / 4 {
+                let i = 4 * k;
+
                 self.push_pi(Fq::zero());
-                product[k] = self.cs.add(
-                    product[k],
-                    values[j],
-                    Fq::one(),
-                    MDS_MATRIX[k][j],
+                let z1 = self.cs.add(
+                    values[i],
+                    values[i + 1],
+                    MDS_MATRIX[j][i],
+                    MDS_MATRIX[j][i + 1],
                     -Fq::one(),
                     Fq::zero(),
                     Fq::zero(),
                 );
+
+                self.push_pi(Fq::zero());
+                let z2 = self.cs.add(
+                    values[i + 2],
+                    values[i + 3],
+                    MDS_MATRIX[j][i + 2],
+                    MDS_MATRIX[j][i + 3],
+                    -Fq::one(),
+                    Fq::zero(),
+                    Fq::zero(),
+                );
+
+                self.push_pi(Fq::zero());
+                z3 = self.cs.add(
+                    z1,
+                    z2,
+                    Fq::one(),
+                    Fq::one(),
+                    -Fq::one(),
+                    Fq::zero(),
+                    Fq::zero(),
+                );
+            }
+
+            // TODO - Replace by compiler constant evaluation
+            if WIDTH < 4 {
+                for k in 0..WIDTH {
+                    self.push_pi(Fq::zero());
+                    product[k] = self.cs.add(
+                        product[k],
+                        values[j],
+                        Fq::one(),
+                        MDS_MATRIX[k][j],
+                        -Fq::one(),
+                        Fq::zero(),
+                        Fq::zero(),
+                    );
+                }
+            } else if WIDTH & 1 == 1 {
+                self.push_pi(Fq::zero());
+                product[j] = self.cs.add(
+                    z3,
+                    values[WIDTH - 1],
+                    Fq::one(),
+                    MDS_MATRIX[j][WIDTH - 1],
+                    -Fq::one(),
+                    Fq::zero(),
+                    Fq::zero(),
+                );
+            } else {
+                product[j] = z3;
             }
         }
 
@@ -211,19 +264,76 @@ where
         let circuit_size = self.cs.circuit_size();
 
         let mut product = [self.zero; WIDTH];
+        let mut z3 = self.zero;
 
         for j in 0..WIDTH {
-            for k in 0..WIDTH {
+            for k in 0..WIDTH / 4 {
+                let i = 4 * k;
+
+                let q_c = constants[i] * MDS_MATRIX[j][i] + constants[i + 1] * MDS_MATRIX[j][i + 1];
                 self.push_pi(Fq::zero());
-                product[k] = self.cs.add(
-                    product[k],
-                    values[j],
-                    Fq::one(),
-                    MDS_MATRIX[k][j],
+                let z1 = self.cs.add(
+                    values[i],
+                    values[i + 1],
+                    MDS_MATRIX[j][i],
+                    MDS_MATRIX[j][i + 1],
                     -Fq::one(),
-                    constants[j] * MDS_MATRIX[k][j],
+                    q_c,
                     Fq::zero(),
                 );
+
+                let q_c = constants[i + 2] * MDS_MATRIX[j][i + 2]
+                    + constants[i + 3] * MDS_MATRIX[j][i + 3];
+                self.push_pi(Fq::zero());
+                let z2 = self.cs.add(
+                    values[i + 2],
+                    values[i + 3],
+                    MDS_MATRIX[j][i + 2],
+                    MDS_MATRIX[j][i + 3],
+                    -Fq::one(),
+                    q_c,
+                    Fq::zero(),
+                );
+
+                self.push_pi(Fq::zero());
+                z3 = self.cs.add(
+                    z1,
+                    z2,
+                    Fq::one(),
+                    Fq::one(),
+                    -Fq::one(),
+                    Fq::zero(),
+                    Fq::zero(),
+                );
+            }
+
+            // TODO - Replace by compiler constant evaluation
+            if WIDTH < 4 {
+                for k in 0..WIDTH {
+                    self.push_pi(Fq::zero());
+                    product[k] = self.cs.add(
+                        product[k],
+                        values[j],
+                        Fq::one(),
+                        MDS_MATRIX[k][j],
+                        -Fq::one(),
+                        constants[j] * MDS_MATRIX[k][j],
+                        Fq::zero(),
+                    );
+                }
+            } else if WIDTH & 1 == 1 {
+                self.push_pi(Fq::zero());
+                product[j] = self.cs.add(
+                    z3,
+                    values[WIDTH - 1],
+                    Fq::one(),
+                    MDS_MATRIX[j][WIDTH - 1],
+                    -Fq::one(),
+                    constants[WIDTH - 1] * MDS_MATRIX[j][WIDTH - 1],
+                    Fq::zero(),
+                );
+            } else {
+                product[j] = z3;
             }
         }
 
@@ -345,6 +455,8 @@ mod tests {
             .for_each(|(x, v)| *v = composer.add_input(*x));
 
         let (composer, pi_iter) = GadgetStrategy::hades_gadget(composer, pi.iter_mut(), &mut x_var);
+        assert_eq!(super::PI_SIZE, composer.circuit_size());
+
         let (mut composer, mut pi_iter) =
             GadgetStrategy::constrain_gadget(composer, pi_iter, &x_var, h);
 
