@@ -1,10 +1,10 @@
 mod ark;
 mod mds;
-mod settings_width;
+
+pub use algebra::fields::jubjub::fq::Fq;
 
 fn main() -> std::io::Result<()> {
-    settings_width::write()?;
-    mds::write_to("assets/mds.bin")?;
     ark::write_to("assets/ark.bin")?;
+    mds::write_to("assets/mds.bin")?;
     Ok(())
 }

@@ -1,6 +1,6 @@
 [package]
 name = "hades252"
-version = "1.0.0"
+version = "2.0.0"
 authors = [
   "kev <kevtheappdev@gmail.com>", "zer0 <matteo@dusk.network>",
   "Victor Lopes <victor@dusk.network>", "kr0 <c.perezbaro@gmail.com>"
@@ -8,39 +8,52 @@ authors = [
 edition = "2018"
 build="build/build.rs"
 
-[dependencies]
-curve25519-dalek = { version = "2", features = ["serde", "avx2_backend"] }
-merlin = "2"
-lazy_static = "1.3.0"
+[features]
+trace = ["tracing"]
 
-[dependencies.bulletproofs]
-git = "https://github.com/dusk-network/bulletproofs"
-branch = "develop"
-features = ["yoloproofs"]
+[dependencies]
+lazy_static = "1.3.0"
+algebra = { git = "https://github.com/scipr-lab/zexe/", features = [ "parallel" ]}
+num-traits = "0.2"
+
+[dependencies.tracing]
+version = "0.1"
+optional = true
+
+[dependencies.plonk]
+git = "https://github.com/dusk-network/plonk"
+branch = "fast_prover_zexe"
 
 [dev-dependencies]
 rand = "0.7"
 criterion = "0.3"
+ff-fft = { git = "https://github.com/scipr-lab/zexe/" }
+merlin = "2"
+poly-commit = { git = "https://github.com/scipr-lab/poly-commit", branch = "master" }
 
 [build-dependencies]
-curve25519-dalek = { version = "2", features = ["serde", "avx2_backend"] }
-
-[profile.dev]
-opt-level = 3
-debug = false
-rpath = false
-lto = false
-debug-assertions = false
-codegen-units = 16
-panic = 'unwind'
-incremental = false
-overflow-checks = false
-
+algebra = { git = "https://github.com/scipr-lab/zexe/", features = [ "parallel" ]}
+num-traits = "0.2"
+sha2 = "0.8"
 
 [profile.release]
 debug = false
 panic = 'abort'
 lto = true
 incremental = false
-
 codegen-units = 1
+target-cpu = "native"
+
+# This is a temporary fix until we stop to use zexe; it's needed to replace
+# in the dependency graph the library below with the revision specified.
+# Unfortunately `patch` works matching just the URL - doesn't take in account
+# revision or branches, see:  https://github.com/rust-lang/cargo/issues/5478
+#
+# A quick workaround is changing the URL with double slashes
+[patch.'https://github.com/scipr-lab/zexe/']
+algebra = { git = 'https://github.com/scipr-lab//zexe', rev="2c22b77" }
+ff-fft = { git = "https://github.com/scipr-lab//zexe", rev="2c22b77" }
+bench-utils = { git = "https://github.com/scipr-lab//zexe", rev="2c22b77" }
+
+[patch.'https://github.com/scipr-lab/poly-commit']
+poly-commit = { git = "https://github.com/scipr-lab//poly-commit", rev="77676213"}
