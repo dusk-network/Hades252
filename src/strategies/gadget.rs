@@ -510,12 +510,14 @@ mod tests {
             let mut composer = StandardComposer::new();
             let mut pi = vec![BlsScalar::zero(); CAPACITY];
 
-            let mut i_var: [Variable; WIDTH] = [unsafe { mem::zeroed() }; WIDTH];
+            let zero = composer.add_input(BlsScalar::zero());
+
+            let mut i_var: [Variable; WIDTH] = [zero; WIDTH];
             i.iter().zip(i_var.iter_mut()).for_each(|(i, v)| {
                 *v = composer.add_input(*i);
             });
 
-            let mut o_var: [Variable; WIDTH] = [unsafe { mem::zeroed() }; WIDTH];
+            let mut o_var: [Variable; WIDTH] = [zero; WIDTH];
             o.iter().zip(o_var.iter_mut()).for_each(|(o, v)| {
                 *v = composer.add_input(*o);
             });
@@ -523,6 +525,19 @@ mod tests {
             perm.copy_from_slice(&i_var);
             let (mut composer, _) =
                 GadgetStrategy::hades_gadget(composer, pi.iter_mut(), &mut i_var);
+
+            perm.iter().zip(o_var.iter()).for_each(|(p, o)| {
+                composer.add_gate(
+                    *p,
+                    *o,
+                    zero,
+                    -BlsScalar::one(),
+                    BlsScalar::one(),
+                    BlsScalar::zero(),
+                    BlsScalar::zero(),
+                    BlsScalar::zero(),
+                );
+            });
 
             composer.add_dummy_constraints();
 

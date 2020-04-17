@@ -74,7 +74,7 @@ pub trait Strategy<T: Clone> {
 
         let last = words.len() - 1;
 
-        /// Add round keys to each word
+        // Add round keys to each word
         self.add_round_key(constants, &mut words[last..last + 1]);
 
         // Then apply quintic s-box
@@ -100,14 +100,14 @@ pub trait Strategy<T: Clone> {
     where
         I: Iterator<Item = &'a BlsScalar>,
     {
-        /// Add round keys to each word
+        // Add round keys to each word
         self.add_round_key(constants, words);
 
-        ///// Then apply quintic s-box
-        //words.iter_mut().for_each(|w| self.quintic_s_box(w));
+        // Then apply quintic s-box
+        words.iter_mut().for_each(|w| self.quintic_s_box(w));
 
-        ///// Multiply this result by the MDS matrix
-        //self.mul_matrix(words);
+        // Multiply this result by the MDS matrix
+        self.mul_matrix(words);
     }
 
     /// Applies a `permutation-round` of the `Hades252` strategy.
@@ -132,17 +132,17 @@ pub trait Strategy<T: Clone> {
     fn perm(&mut self, data: &mut [T]) {
         let mut constants_iter = ROUND_CONSTANTS.iter();
 
-        ///// Apply R_f full rounds
+        //// Apply R_f full rounds
         //for _ in 0..TOTAL_FULL_ROUNDS / 2 {
         self.apply_full_round(&mut constants_iter, data);
         //}
 
-        ///// Apply R_P partial rounds
+        //// Apply R_P partial rounds
         //for _ in 0..PARTIAL_ROUNDS {
         //    self.apply_partial_round(&mut constants_iter, data);
         //}
 
-        ///// Apply R_f full rounds
+        //// Apply R_f full rounds
         //for _ in 0..TOTAL_FULL_ROUNDS / 2 {
         //    self.apply_full_round(&mut constants_iter, data);
         //}
