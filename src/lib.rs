@@ -1,8 +1,8 @@
-#![feature(trait_alias)]
-#![feature(external_doc)]
-#![deny(missing_docs)]
-#![doc(include = "../README.md")]
-#![feature(test)]
+//#![feature(trait_alias)]
+//#![feature(external_doc)]
+//#![deny(missing_docs)]
+//#![doc(include = "../README.md")]
+//#![feature(test)]
 mod mds_matrix;
 mod round_constants;
 
@@ -19,7 +19,9 @@ pub const PARTIAL_ROUNDS: usize = 59;
 /// Maximum input width for the rounds
 pub const WIDTH: usize = 5;
 
-pub use algebra::curves::bls12_381::Bls12_381;
-pub use algebra::curves::jubjub::JubJubProjective;
-pub use algebra::fields::jubjub::fq::Fq;
+pub use bls12_381::Scalar as BlsScalar;
+
+//pub use algebra::curves::bls12_381::Bls12_381;
+//pub use algebra::curves::jubjub::JubJubProjective;
+//pub use algebra::fields::jubjub::fq::Fq;
 pub use strategies::{GadgetStrategy, ScalarStrategy, Strategy};
