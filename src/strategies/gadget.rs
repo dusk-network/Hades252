@@ -1,25 +1,28 @@
 use super::Strategy;
-use crate::{mds_matrix::MDS_MATRIX, Bls12_381, Fq, WIDTH};
+use crate::{mds_matrix::MDS_MATRIX, BlsScalar, WIDTH};
 
-use num_traits::{One, Zero};
-use plonk::cs::{composer::StandardComposer, constraint_system::Variable};
-
+use plonk::constraint_system::standard::composer::StandardComposer;
+use plonk::constraint_system::variable::Variable;
+//
+//use num_traits::{One, Zero};
+//use plonk::cs::{composer::StandardComposer, constraint_system::Variable};
+//
 #[cfg(feature = "trace")]
-use {plonk::cs::Composer, tracing::trace};
-
-/// Size of the generated public inputs for the permutation gadget
-pub const PI_SIZE: usize = 1736;
-
-/// Implements a Hades252 strategy for `Variable` as input values.
+use {plonk::constraint_system::standard::Composer, tracing::trace};
+//
+///// Size of the generated public inputs for the permutation gadget
+//pub const PI_SIZE: usize = 1736;
+//
+///// Implements a Hades252 strategy for `Variable` as input values.
 /// Requires a reference to a `ConstraintSystem`.
 pub struct GadgetStrategy<'a, P>
 where
-    P: Iterator<Item = &'a mut Fq>,
+    P: Iterator<Item = &'a mut BlsScalar>,
 {
     /// Counter over pushed PI
     pub pi_len: usize,
     /// A reference to the constraint system used by the gadgets
-    pub cs: StandardComposer<Bls12_381>,
+    pub cs: StandardComposer,
     /// Mutable iterator over the public inputs
     pub pi_iter: P,
     /// Variable representing zero
@@ -28,11 +31,11 @@ where
 
 impl<'a, P> GadgetStrategy<'a, P>
 where
-    P: Iterator<Item = &'a mut Fq>,
+    P: Iterator<Item = &'a mut BlsScalar>,
 {
     /// Constructs a new `GadgetStrategy` with the constraint system.
-    pub fn new(mut cs: StandardComposer<Bls12_381>, pi_iter: P) -> Self {
-        let zero = cs.add_input(Fq::zero());
+    pub fn new(mut cs: StandardComposer, pi_iter: P) -> Self {
+        let zero = cs.add_input(BlsScalar::zero());
         GadgetStrategy {
             pi_len: 0,
             cs,
@@ -42,16 +45,16 @@ where
     }
 
     /// Return the inner iterator over public inputs
-    pub fn into_inner(self) -> (StandardComposer<Bls12_381>, P) {
+    pub fn into_inner(self) -> (StandardComposer, P) {
         (self.cs, self.pi_iter)
     }
 
     /// Perform the hades permutation on a plonk circuit
     pub fn hades_gadget(
-        composer: StandardComposer<Bls12_381>,
+        composer: StandardComposer,
         pi: P,
         x: &mut [Variable],
-    ) -> (StandardComposer<Bls12_381>, P) {
+    ) -> (StandardComposer, P) {
         #[cfg(feature = "trace")]
         let circuit_size = composer.circuit_size();
 
@@ -73,20 +76,20 @@ where
 
     /// Perform the poseidon hash on a plonk circuit
     pub fn poseidon_gadget(
-        composer: StandardComposer<Bls12_381>,
+        composer: StandardComposer,
         pi: P,
         x: &mut [Variable],
-    ) -> (StandardComposer<Bls12_381>, P, Variable) {
+    ) -> (StandardComposer, P, Variable) {
         let (composer, pi) = GadgetStrategy::hades_gadget(composer, pi, x);
         (composer, pi, x[1])
     }
 
     /// Perform the poseidon slice hash on a plonk circuit
     pub fn poseidon_slice_gadget(
-        composer: StandardComposer<Bls12_381>,
+        composer: StandardComposer,
         pi: P,
         x: &[Variable],
-    ) -> (StandardComposer<Bls12_381>, P, Variable) {
+    ) -> (StandardComposer, P, Variable) {
         let mut strategy = GadgetStrategy::new(composer, pi);
 
         let x = strategy.poseidon_slice(x);
@@ -98,12 +101,12 @@ where
 
     /// Constrain x == h, being h a public input
     pub fn constrain_gadget(
-        mut composer: StandardComposer<Bls12_381>,
+        mut composer: StandardComposer,
         mut pi: P,
         x: &[Variable],
-        h: &[Fq],
-    ) -> (StandardComposer<Bls12_381>, P) {
-        let zero = composer.add_input(Fq::zero());
+        h: &[BlsScalar],
+    ) -> (StandardComposer, P) {
+        let zero = composer.add_input(BlsScalar::zero());
 
         x.iter().zip(h.iter()).for_each(|(x, h)| {
             pi.next()
@@ -114,10 +117,10 @@ where
                 *x,
                 zero,
                 zero,
-                -Fq::one(),
-                Fq::one(),
-                Fq::one(),
-                Fq::zero(),
+                -BlsScalar::one(),
+                BlsScalar::one(),
+                BlsScalar::one(),
+                BlsScalar::zero(),
                 *h,
             );
         });
@@ -125,7 +128,7 @@ where
         (composer, pi)
     }
 
-    fn push_pi(&mut self, p: Fq) {
+    fn push_pi(&mut self, p: BlsScalar) {
         self.pi_len += 1;
         self.pi_iter
             .next()
@@ -136,7 +139,7 @@ where
 
 impl<'a, P> Strategy<Variable> for GadgetStrategy<'a, P>
 where
-    P: Iterator<Item = &'a mut Fq>,
+    P: Iterator<Item = &'a mut BlsScalar>,
 {
     fn quintic_s_box(&mut self, value: &mut Variable) {
         #[cfg(feature = "trace")]
@@ -145,21 +148,24 @@ where
         let v = *value;
 
         (0..2).for_each(|_| {
-            self.push_pi(Fq::zero());
+            self.push_pi(BlsScalar::zero());
             *value = self.cs.mul(
+                BlsScalar::one(),
                 *value,
                 *value,
-                Fq::one(),
-                -Fq::one(),
-                Fq::zero(),
-                Fq::zero(),
+                BlsScalar::zero(),
+                BlsScalar::zero(),
             )
         });
 
-        self.push_pi(Fq::zero());
-        *value = self
-            .cs
-            .mul(*value, v, Fq::one(), -Fq::one(), Fq::zero(), Fq::zero());
+        self.push_pi(BlsScalar::zero());
+        *value = self.cs.mul(
+            BlsScalar::one(),
+            *value,
+            v,
+            BlsScalar::zero(),
+            BlsScalar::zero(),
+        );
 
         #[cfg(feature = "trace")]
         {
@@ -182,64 +188,49 @@ where
             for k in 0..WIDTH / 4 {
                 let i = 4 * k;
 
-                self.push_pi(Fq::zero());
+                self.push_pi(BlsScalar::zero());
                 let z1 = self.cs.add(
-                    values[i],
-                    values[i + 1],
-                    MDS_MATRIX[j][i],
-                    MDS_MATRIX[j][i + 1],
-                    -Fq::one(),
-                    Fq::zero(),
-                    Fq::zero(),
+                    (MDS_MATRIX[j][i], values[i]),
+                    (MDS_MATRIX[j][i + 1], values[i + 1]),
+                    BlsScalar::zero(),
+                    BlsScalar::zero(),
                 );
 
-                self.push_pi(Fq::zero());
+                self.push_pi(BlsScalar::zero());
                 let z2 = self.cs.add(
-                    values[i + 2],
-                    values[i + 3],
-                    MDS_MATRIX[j][i + 2],
-                    MDS_MATRIX[j][i + 3],
-                    -Fq::one(),
-                    Fq::zero(),
-                    Fq::zero(),
+                    (MDS_MATRIX[j][i + 2], values[i + 2]),
+                    (MDS_MATRIX[j][i + 3], values[i + 3]),
+                    BlsScalar::zero(),
+                    BlsScalar::zero(),
                 );
 
-                self.push_pi(Fq::zero());
+                self.push_pi(BlsScalar::zero());
                 z3 = self.cs.add(
-                    z1,
-                    z2,
-                    Fq::one(),
-                    Fq::one(),
-                    -Fq::one(),
-                    Fq::zero(),
-                    Fq::zero(),
+                    (BlsScalar::one(), z1),
+                    (BlsScalar::one(), z2),
+                    BlsScalar::zero(),
+                    BlsScalar::zero(),
                 );
             }
 
             // TODO - Replace by compiler constant evaluation
             if WIDTH < 4 {
                 for k in 0..WIDTH {
-                    self.push_pi(Fq::zero());
+                    self.push_pi(BlsScalar::zero());
                     product[k] = self.cs.add(
-                        product[k],
-                        values[j],
-                        Fq::one(),
-                        MDS_MATRIX[k][j],
-                        -Fq::one(),
-                        Fq::zero(),
-                        Fq::zero(),
+                        (BlsScalar::one(), product[k]),
+                        (MDS_MATRIX[k][j], values[j]),
+                        BlsScalar::zero(),
+                        BlsScalar::zero(),
                     );
                 }
             } else if WIDTH & 1 == 1 {
-                self.push_pi(Fq::zero());
+                self.push_pi(BlsScalar::zero());
                 product[j] = self.cs.add(
-                    z3,
-                    values[WIDTH - 1],
-                    Fq::one(),
-                    MDS_MATRIX[j][WIDTH - 1],
-                    -Fq::one(),
-                    Fq::zero(),
-                    Fq::zero(),
+                    (BlsScalar::one(), z3),
+                    (MDS_MATRIX[j][WIDTH - 1], values[WIDTH - 1]),
+                    BlsScalar::zero(),
+                    BlsScalar::zero(),
                 );
             } else {
                 product[j] = z3;
@@ -259,7 +250,7 @@ where
     }
 
     /// Multiply the values for MDS matrix.
-    fn mul_matrix_partial_round(&mut self, constants: &[Fq], values: &mut [Variable]) {
+    fn mul_matrix_partial_round(&mut self, constants: &[BlsScalar], values: &mut [Variable]) {
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();
 
@@ -271,66 +262,51 @@ where
                 let i = 4 * k;
 
                 let q_c = constants[i] * MDS_MATRIX[j][i] + constants[i + 1] * MDS_MATRIX[j][i + 1];
-                self.push_pi(Fq::zero());
+                self.push_pi(BlsScalar::zero());
                 let z1 = self.cs.add(
-                    values[i],
-                    values[i + 1],
-                    MDS_MATRIX[j][i],
-                    MDS_MATRIX[j][i + 1],
-                    -Fq::one(),
+                    (MDS_MATRIX[j][i], values[i]),
+                    (MDS_MATRIX[j][i + 1], values[i + 1]),
                     q_c,
-                    Fq::zero(),
+                    BlsScalar::zero(),
                 );
 
                 let q_c = constants[i + 2] * MDS_MATRIX[j][i + 2]
                     + constants[i + 3] * MDS_MATRIX[j][i + 3];
-                self.push_pi(Fq::zero());
+                self.push_pi(BlsScalar::zero());
                 let z2 = self.cs.add(
-                    values[i + 2],
-                    values[i + 3],
-                    MDS_MATRIX[j][i + 2],
-                    MDS_MATRIX[j][i + 3],
-                    -Fq::one(),
+                    (MDS_MATRIX[j][i + 2], values[i + 2]),
+                    (MDS_MATRIX[j][i + 3], values[i + 3]),
                     q_c,
-                    Fq::zero(),
+                    BlsScalar::zero(),
                 );
 
-                self.push_pi(Fq::zero());
+                self.push_pi(BlsScalar::zero());
                 z3 = self.cs.add(
-                    z1,
-                    z2,
-                    Fq::one(),
-                    Fq::one(),
-                    -Fq::one(),
-                    Fq::zero(),
-                    Fq::zero(),
+                    (BlsScalar::one(), z1),
+                    (BlsScalar::one(), z2),
+                    BlsScalar::zero(),
+                    BlsScalar::zero(),
                 );
             }
 
             // TODO - Replace by compiler constant evaluation
             if WIDTH < 4 {
                 for k in 0..WIDTH {
-                    self.push_pi(Fq::zero());
+                    self.push_pi(BlsScalar::zero());
                     product[k] = self.cs.add(
-                        product[k],
-                        values[j],
-                        Fq::one(),
-                        MDS_MATRIX[k][j],
-                        -Fq::one(),
+                        (BlsScalar::one(), product[k]),
+                        (MDS_MATRIX[k][j], values[j]),
                         constants[j] * MDS_MATRIX[k][j],
-                        Fq::zero(),
+                        BlsScalar::zero(),
                     );
                 }
             } else if WIDTH & 1 == 1 {
-                self.push_pi(Fq::zero());
+                self.push_pi(BlsScalar::zero());
                 product[j] = self.cs.add(
-                    z3,
-                    values[WIDTH - 1],
-                    Fq::one(),
-                    MDS_MATRIX[j][WIDTH - 1],
-                    -Fq::one(),
+                    (BlsScalar::one(), z3),
+                    (MDS_MATRIX[j][WIDTH - 1], values[WIDTH - 1]),
                     constants[WIDTH - 1] * MDS_MATRIX[j][WIDTH - 1],
-                    Fq::zero(),
+                    BlsScalar::zero(),
                 );
             } else {
                 product[j] = z3;
@@ -351,7 +327,7 @@ where
 
     fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [Variable])
     where
-        I: Iterator<Item = &'b Fq>,
+        I: Iterator<Item = &'b BlsScalar>,
     {
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();
@@ -362,15 +338,12 @@ where
                 .cloned()
                 .expect("Hades252 out of ARK constants");
 
-            self.push_pi(Fq::zero());
+            self.push_pi(BlsScalar::zero());
             *w = self.cs.add(
-                *w,
-                self.zero,
-                Fq::one(),
-                Fq::zero(),
-                -Fq::one(),
+                (BlsScalar::one(), *w),
+                (BlsScalar::zero(), self.zero),
                 p,
-                Fq::zero(),
+                BlsScalar::zero(),
             );
         });
 
@@ -392,7 +365,7 @@ where
         elements
             .iter_mut()
             .enumerate()
-            .for_each(|(i, e)| *e = self.cs.add_input(Fq::from((i + 1) as u8)));
+            .for_each(|(i, e)| *e = self.cs.add_input(BlsScalar::from((i + 1) as u64)));
 
         data.chunks(WIDTH - 2).fold(self.zero, |r, chunk| {
             perm[0] = elements[chunk.len() - 1];
@@ -410,209 +383,287 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{Bls12_381, Fq, GadgetStrategy, ScalarStrategy, Strategy, WIDTH};
+    use crate::{BlsScalar, GadgetStrategy, ScalarStrategy, Strategy, WIDTH};
 
-    use ff_fft::EvaluationDomain;
+    use std::mem;
+
     use merlin::Transcript;
-    use num_traits::{One, Zero};
-    use plonk::cs::composer::StandardComposer;
-    use plonk::cs::constraint_system::Variable;
-    use plonk::cs::proof::Proof;
-    use plonk::cs::{Composer, PreProcessedCircuit};
-    use plonk::srs;
-    use poly_commit::kzg10::{Powers, VerifierKey};
+    use plonk::commitment_scheme::kzg10::key::ProverKey;
+    use plonk::commitment_scheme::kzg10::PublicParameters;
+    use plonk::constraint_system::standard::proof::Proof;
+    use plonk::constraint_system::standard::{Composer, PreProcessedCircuit, StandardComposer};
+    use plonk::constraint_system::variable::Variable;
+    use plonk::fft::EvaluationDomain;
     use rand::Rng;
 
-    const TEST_PI_SIZE: usize = super::PI_SIZE + WIDTH + 3;
-
-    fn perm(values: &mut [Fq]) {
-        let mut strategy = ScalarStrategy::new();
-        strategy.perm(values);
-    }
-
-    fn gen_transcript() -> Transcript {
-        Transcript::new(b"hades-plonk")
-    }
-
-    fn circuit(
-        domain: &EvaluationDomain<Fq>,
-        ck: &Powers<Bls12_381>,
-        x: &[Fq],
-        h: &[Fq],
-    ) -> (
-        Transcript,
-        PreProcessedCircuit<Bls12_381>,
-        StandardComposer<Bls12_381>,
-        [Fq; TEST_PI_SIZE],
-    ) {
-        let mut transcript = gen_transcript();
-        let mut composer: StandardComposer<Bls12_381> = StandardComposer::new();
-
-        let mut pi = [Fq::zero(); TEST_PI_SIZE];
-        let mut x_var: [Variable; WIDTH] = unsafe { [std::mem::zeroed(); WIDTH] };
-        x.iter()
-            .zip(x_var.iter_mut())
-            .for_each(|(x, v)| *v = composer.add_input(*x));
-
-        let (composer, pi_iter) = GadgetStrategy::hades_gadget(composer, pi.iter_mut(), &mut x_var);
-        assert_eq!(super::PI_SIZE, composer.circuit_size());
-
-        let (mut composer, mut pi_iter) =
-            GadgetStrategy::constrain_gadget(composer, pi_iter, &x_var, h);
-
-        (0..3).for_each(|_| {
-            pi_iter
-                .next()
-                .map(|s| *s = Fq::zero())
-                .expect("Public inputs iterator depleted");
-
-            composer.add_dummy_constraints();
-        });
-
-        let circuit = composer.preprocess(&ck, &mut transcript, &domain);
-        (transcript, circuit, composer, pi)
-    }
-
-    fn prove(
-        domain: &EvaluationDomain<Fq>,
-        ck: &Powers<Bls12_381>,
-        x: &[Fq],
-        h: &[Fq],
-    ) -> (Proof<Bls12_381>, [Fq; TEST_PI_SIZE]) {
-        let (mut transcript, circuit, mut composer, pi) = circuit(domain, ck, x, h);
-        let proof = composer.prove(&ck, &circuit, &mut transcript);
-        (proof, pi)
-    }
-
-    fn verify(
-        transcript: &mut Transcript,
-        circuit: &PreProcessedCircuit<Bls12_381>,
-        vk: &VerifierKey<Bls12_381>,
-        proof: &Proof<Bls12_381>,
-        pi: &[Fq],
-    ) -> bool {
-        proof.verify(&circuit, transcript, vk, &pi.to_vec())
-    }
+    //    use crate::{Bls12_381, BlsScalar, GadgetStrategy, ScalarStrategy, Strategy, WIDTH};
+    //
+    //    use ff_fft::EvaluationDomain;
+    //    use merlin::Transcript;
+    //    use num_traits::{One, Zero};
+    //    use plonk::cs::composer::StandardComposer;
+    //    use plonk::cs::constraint_system::Variable;
+    //    use plonk::cs::proof::Proof;
+    //    use plonk::cs::{Composer, PreProcessedCircuit};
+    //    use plonk::srs;
+    //    use poly_commit::kzg10::{Powers, VerifierKey};
+    //    use rand::Rng;
+    //
+    //    const TEST_PI_SIZE: usize = super::PI_SIZE + WIDTH + 3;
+    //
+    //    fn perm(values: &mut [BlsScalar]) {
+    //        let mut strategy = ScalarStrategy::new();
+    //        strategy.perm(values);
+    //    }
+    //
+    //    fn gen_transcript() -> Transcript {
+    //        Transcript::new(b"hades-plonk")
+    //    }
+    //
+    //    fn circuit(
+    //        domain: &EvaluationDomain<BlsScalar>,
+    //        ck: &Powers<Bls12_381>,
+    //        x: &[BlsScalar],
+    //        h: &[BlsScalar],
+    //    ) -> (
+    //        Transcript,
+    //        PreProcessedCircuit<Bls12_381>,
+    //        StandardComposer,
+    //        [BlsScalar; TEST_PI_SIZE],
+    //    ) {
+    //        let mut transcript = gen_transcript();
+    //        let mut composer: StandardComposer = StandardComposer::new();
+    //
+    //        let mut pi = [BlsScalar::zero(); TEST_PI_SIZE];
+    //        let mut x_var: [Variable; WIDTH] = unsafe { [std::mem::zeroed(); WIDTH] };
+    //        x.iter()
+    //            .zip(x_var.iter_mut())
+    //            .for_each(|(x, v)| *v = composer.add_input(*x));
+    //
+    //        let (composer, pi_iter) = GadgetStrategy::hades_gadget(composer, pi.iter_mut(), &mut x_var);
+    //        assert_eq!(super::PI_SIZE, composer.circuit_size());
+    //
+    //        let (mut composer, mut pi_iter) =
+    //            GadgetStrategy::constrain_gadget(composer, pi_iter, &x_var, h);
+    //
+    //        (0..3).for_each(|_| {
+    //            pi_iter
+    //                .next()
+    //                .map(|s| *s = BlsScalar::zero())
+    //                .expect("Public inputs iterator depleted");
+    //
+    //            composer.add_dummy_constraints();
+    //        });
+    //
+    //        let circuit = composer.preprocess(&ck, &mut transcript, &domain);
+    //        (transcript, circuit, composer, pi)
+    //    }
+    //
+    //    fn prove(
+    //        domain: &EvaluationDomain<BlsScalar>,
+    //        ck: &Powers<Bls12_381>,
+    //        x: &[BlsScalar],
+    //        h: &[BlsScalar],
+    //    ) -> (Proof<Bls12_381>, [BlsScalar; TEST_PI_SIZE]) {
+    //        let (mut transcript, circuit, mut composer, pi) = circuit(domain, ck, x, h);
+    //        let proof = composer.prove(&ck, &circuit, &mut transcript);
+    //        (proof, pi)
+    //    }
+    //
+    //    fn verify(
+    //        transcript: &mut Transcript,
+    //        circuit: &PreProcessedCircuit<Bls12_381>,
+    //        vk: &VerifierKey<Bls12_381>,
+    //        proof: &Proof<Bls12_381>,
+    //        pi: &[BlsScalar],
+    //    ) -> bool {
+    //        proof.verify(&circuit, transcript, vk, &pi.to_vec())
+    //    }
 
     #[test]
     fn hades_preimage() {
-        const CAPACITY: usize = 4096;
+        const CAPACITY: usize = 2048;
 
-        let public_parameters = srs::setup(CAPACITY, &mut rand::thread_rng());
-        let (ck, vk) = srs::trim(&public_parameters, CAPACITY).unwrap();
-        let domain: EvaluationDomain<Fq> = EvaluationDomain::new(CAPACITY).unwrap();
+        fn gen_random_bls_scalar() -> BlsScalar {
+            let mut bytes = [0x00u8; 64];
+            (&mut rand::thread_rng()).fill(&mut bytes);
 
-        let e = [Fq::from(5000u64); WIDTH];
-        let mut e_perm = [Fq::from(5000u64); WIDTH];
-        perm(&mut e_perm);
+            BlsScalar::from_bytes_wide(&bytes)
+        }
 
-        let (transcript, circuit, _, _) = circuit(&domain, &ck, &e, &e_perm);
+        fn hades() -> ([BlsScalar; WIDTH], [BlsScalar; WIDTH]) {
+            let mut input = [BlsScalar::zero(); WIDTH];
+            input.iter_mut().for_each(|s| *s = gen_random_bls_scalar());
 
-        let x_scalar = Fq::from(31u64);
-        let mut x = [Fq::zero(); WIDTH];
-        x[1] = x_scalar;
-        let mut h = [Fq::zero(); WIDTH];
-        h.copy_from_slice(&x);
-        perm(&mut h);
+            let mut output = [BlsScalar::zero(); WIDTH];
+            output.copy_from_slice(&input);
+            ScalarStrategy::new().perm(&mut output);
 
-        let y_scalar = Fq::from(30u64);
-        let mut y = [Fq::zero(); WIDTH];
-        y[1] = y_scalar;
-        let mut i = [Fq::zero(); WIDTH];
-        i.copy_from_slice(&y);
-        perm(&mut i);
+            (input, output)
+        }
 
-        let (proof, pi) = prove(&domain, &ck, &x, &h);
-        assert!(verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
+        fn new_composer(
+            i: [BlsScalar; WIDTH],
+            o: [BlsScalar; WIDTH],
+        ) -> (StandardComposer, Vec<BlsScalar>) {
+            let mut perm: [Variable; WIDTH] = [unsafe { mem::zeroed() }; WIDTH];
+            let mut composer = StandardComposer::new();
+            let mut pi = vec![BlsScalar::zero(); CAPACITY];
 
-        let (proof, pi) = prove(&domain, &ck, &y, &i);
-        assert!(verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
+            let mut i_var: [Variable; WIDTH] = [unsafe { mem::zeroed() }; WIDTH];
+            i.iter().zip(i_var.iter_mut()).for_each(|(i, v)| {
+                *v = composer.add_input(*i);
+            });
 
-        // Wrong pre-image
-        let (proof, pi) = prove(&domain, &ck, &y, &h);
-        assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
+            let mut o_var: [Variable; WIDTH] = [unsafe { mem::zeroed() }; WIDTH];
+            o.iter().zip(o_var.iter_mut()).for_each(|(o, v)| {
+                *v = composer.add_input(*o);
+            });
 
-        // Wrong public image
-        let (proof, pi) = prove(&domain, &ck, &x, &i);
-        assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
+            perm.copy_from_slice(&i_var);
+            let (mut composer, _) =
+                GadgetStrategy::hades_gadget(composer, pi.iter_mut(), &mut i_var);
 
-        // Inconsistent public image
-        let (proof, _) = prove(&domain, &ck, &x, &h);
-        assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
-    }
+            composer.add_dummy_constraints();
 
-    #[test]
-    fn poseidon_slice() {
-        let public_parameters = srs::setup(4096 * 32, &mut rand::thread_rng());
-        let (ck, vk) = srs::trim(&public_parameters, 4096 * 32).unwrap();
-        let domain: EvaluationDomain<Fq> = EvaluationDomain::new(4096 * 32).unwrap();
+            (composer, pi)
+        }
 
-        // Generate circuit
-        let mut base_transcript = gen_transcript();
-        let mut composer: StandardComposer<Bls12_381> = StandardComposer::new();
+        let public_parameters = PublicParameters::setup(CAPACITY, &mut rand::thread_rng()).unwrap();
 
-        const BITS: usize = WIDTH * 20 - 19;
-        const SLICE_PI_SIZE: usize = super::PI_SIZE * (1 + BITS / 2);
+        let (ck, vk) = public_parameters.trim(CAPACITY).unwrap();
+        let domain = EvaluationDomain::new(CAPACITY).unwrap();
 
-        let mut pi = vec![Fq::zero(); SLICE_PI_SIZE];
-
-        let data: Vec<Fq> = (0..BITS).map(|_| (&mut rand::thread_rng()).gen()).collect();
-        let result = ScalarStrategy::new().poseidon_slice(data.as_slice());
-        let result = composer.add_input(result);
-
-        let vars: Vec<Variable> = data.iter().map(|d| composer.add_input(*d)).collect();
-        let (mut composer, _, x) =
-            GadgetStrategy::poseidon_slice_gadget(composer, pi.iter_mut(), &vars);
-
-        let zero = composer.add_input(Fq::zero());
-        composer.add_gate(
-            result,
-            x,
-            zero,
-            -Fq::one(),
-            Fq::one(),
-            Fq::one(),
-            Fq::zero(),
-            Fq::zero(),
-        );
-
-        composer.add_dummy_constraints();
-
-        let preprocessed_circuit = composer.preprocess(&ck, &mut base_transcript, &domain);
+        // Preprocess circuit
+        let (i, o) = hades();
+        let mut composer = new_composer(i, o).0;
+        let mut transcript = Transcript::new(b"hades-gadget-test");
+        let circuit = composer.preprocess(&ck, &mut transcript, &domain);
 
         // Prove
-        let mut transcript = gen_transcript();
-        let mut composer: StandardComposer<Bls12_381> = StandardComposer::new();
-
-        let mut pi = vec![Fq::zero(); SLICE_PI_SIZE];
-
-        let data: Vec<Fq> = (0..BITS).map(|_| (&mut rand::thread_rng()).gen()).collect();
-        let result = ScalarStrategy::new().poseidon_slice(data.as_slice());
-        let result = composer.add_input(result);
-
-        let vars: Vec<Variable> = data.iter().map(|d| composer.add_input(*d)).collect();
-        let (mut composer, _, x) =
-            GadgetStrategy::poseidon_slice_gadget(composer, pi.iter_mut(), &vars);
-
-        let zero = composer.add_input(Fq::zero());
-        composer.add_gate(
-            result,
-            x,
-            zero,
-            -Fq::one(),
-            Fq::one(),
-            Fq::one(),
-            Fq::zero(),
-            Fq::zero(),
-        );
-
-        composer.add_dummy_constraints();
-
-        let circuit = composer.preprocess(&ck, &mut transcript, &domain);
-        let proof = composer.prove(&ck, &circuit, &mut transcript);
+        let (i, o) = hades();
+        let (mut composer, pi) = new_composer(i, o);
+        let proof_circuit = composer.preprocess(&ck, &mut transcript, &domain);
+        let proof = composer.prove(&ck, &proof_circuit, &mut transcript.clone());
 
         // Verify
-        let mut transcript = base_transcript.clone();
-        assert!(proof.verify(&preprocessed_circuit, &mut transcript, &vk, &pi));
+        assert!(proof.verify(&circuit, &mut transcript.clone(), &vk, pi.as_slice()));
+
+        //        let public_parameters = srs::setup(CAPACITY, &mut rand::thread_rng());
+        //        let (ck, vk) = srs::trim(&public_parameters, CAPACITY).unwrap();
+        //        let domain: EvaluationDomain<BlsScalar> = EvaluationDomain::new(CAPACITY).unwrap();
+        //
+        //        let e = [BlsScalar::from(5000u64); WIDTH];
+        //        let mut e_perm = [BlsScalar::from(5000u64); WIDTH];
+        //        perm(&mut e_perm);
+        //
+        //        let (transcript, circuit, _, _) = circuit(&domain, &ck, &e, &e_perm);
+        //
+        //        let x_scalar = BlsScalar::from(31u64);
+        //        let mut x = [BlsScalar::zero(); WIDTH];
+        //        x[1] = x_scalar;
+        //        let mut h = [BlsScalar::zero(); WIDTH];
+        //        h.copy_from_slice(&x);
+        //        perm(&mut h);
+        //
+        //        let y_scalar = BlsScalar::from(30u64);
+        //        let mut y = [BlsScalar::zero(); WIDTH];
+        //        y[1] = y_scalar;
+        //        let mut i = [BlsScalar::zero(); WIDTH];
+        //        i.copy_from_slice(&y);
+        //        perm(&mut i);
+        //
+        //        let (proof, pi) = prove(&domain, &ck, &x, &h);
+        //        assert!(verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
+        //
+        //        let (proof, pi) = prove(&domain, &ck, &y, &i);
+        //        assert!(verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
+        //
+        //        // Wrong pre-image
+        //        let (proof, pi) = prove(&domain, &ck, &y, &h);
+        //        assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
+        //
+        //        // Wrong public image
+        //        let (proof, pi) = prove(&domain, &ck, &x, &i);
+        //        assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
+        //
+        //        // Inconsistent public image
+        //        let (proof, _) = prove(&domain, &ck, &x, &h);
+        //        assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
     }
+
+    //    #[test]
+    //    fn poseidon_slice() {
+    //        let public_parameters = srs::setup(4096 * 32, &mut rand::thread_rng());
+    //        let (ck, vk) = srs::trim(&public_parameters, 4096 * 32).unwrap();
+    //        let domain: EvaluationDomain<BlsScalar> = EvaluationDomain::new(4096 * 32).unwrap();
+    //
+    //        // Generate circuit
+    //        let mut base_transcript = gen_transcript();
+    //        let mut composer: StandardComposer = StandardComposer::new();
+    //
+    //        const BITS: usize = WIDTH * 20 - 19;
+    //        const SLICE_PI_SIZE: usize = super::PI_SIZE * (1 + BITS / 2);
+    //
+    //        let mut pi = vec![BlsScalar::zero(); SLICE_PI_SIZE];
+    //
+    //        let data: Vec<BlsScalar> = (0..BITS).map(|_| (&mut rand::thread_rng()).gen()).collect();
+    //        let result = ScalarStrategy::new().poseidon_slice(data.as_slice());
+    //        let result = composer.add_input(result);
+    //
+    //        let vars: Vec<Variable> = data.iter().map(|d| composer.add_input(*d)).collect();
+    //        let (mut composer, _, x) =
+    //            GadgetStrategy::poseidon_slice_gadget(composer, pi.iter_mut(), &vars);
+    //
+    //        let zero = composer.add_input(BlsScalar::zero());
+    //        composer.add_gate(
+    //            result,
+    //            x,
+    //            zero,
+    //            -BlsScalar::one(),
+    //            BlsScalar::one(),
+    //            BlsScalar::one(),
+    //            BlsScalar::zero(),
+    //            BlsScalar::zero(),
+    //        );
+    //
+    //        composer.add_dummy_constraints();
+    //
+    //        let preprocessed_circuit = composer.preprocess(&ck, &mut base_transcript, &domain);
+    //
+    //        // Prove
+    //        let mut transcript = gen_transcript();
+    //        let mut composer: StandardComposer = StandardComposer::new();
+    //
+    //        let mut pi = vec![BlsScalar::zero(); SLICE_PI_SIZE];
+    //
+    //        let data: Vec<BlsScalar> = (0..BITS).map(|_| (&mut rand::thread_rng()).gen()).collect();
+    //        let result = ScalarStrategy::new().poseidon_slice(data.as_slice());
+    //        let result = composer.add_input(result);
+    //
+    //        let vars: Vec<Variable> = data.iter().map(|d| composer.add_input(*d)).collect();
+    //        let (mut composer, _, x) =
+    //            GadgetStrategy::poseidon_slice_gadget(composer, pi.iter_mut(), &vars);
+    //
+    //        let zero = composer.add_input(BlsScalar::zero());
+    //        composer.add_gate(
+    //            result,
+    //            x,
+    //            zero,
+    //            -BlsScalar::one(),
+    //            BlsScalar::one(),
+    //            BlsScalar::one(),
+    //            BlsScalar::zero(),
+    //            BlsScalar::zero(),
+    //        );
+    //
+    //        composer.add_dummy_constraints();
+    //
+    //        let circuit = composer.preprocess(&ck, &mut transcript, &domain);
+    //        let proof = composer.prove(&ck, &circuit, &mut transcript);
+    //
+    //        // Verify
+    //        let mut transcript = base_transcript.clone();
+    //        assert!(proof.verify(&preprocessed_circuit, &mut transcript, &vk, &pi));
+    //    }
 }
