@@ -10,10 +10,10 @@ use plonk::constraint_system::variable::Variable;
 #[cfg(feature = "trace")]
 use {plonk::constraint_system::standard::Composer, tracing::trace};
 //
-///// Size of the generated public inputs for the permutation gadget
-//pub const PI_SIZE: usize = 1736;
+/// Size of the generated public inputs for the permutation gadget
+pub const PI_SIZE: usize = 1736;
 //
-///// Implements a Hades252 strategy for `Variable` as input values.
+/// Implements a Hades252 strategy for `Variable` as input values.
 /// Requires a reference to a `ConstraintSystem`.
 pub struct GadgetStrategy<'a, P>
 where
@@ -396,29 +396,16 @@ mod tests {
     use plonk::fft::EvaluationDomain;
     use rand::Rng;
 
-    //    use crate::{Bls12_381, BlsScalar, GadgetStrategy, ScalarStrategy, Strategy, WIDTH};
-    //
-    //    use ff_fft::EvaluationDomain;
-    //    use merlin::Transcript;
-    //    use num_traits::{One, Zero};
-    //    use plonk::cs::composer::StandardComposer;
-    //    use plonk::cs::constraint_system::Variable;
-    //    use plonk::cs::proof::Proof;
-    //    use plonk::cs::{Composer, PreProcessedCircuit};
-    //    use plonk::srs;
-    //    use poly_commit::kzg10::{Powers, VerifierKey};
-    //    use rand::Rng;
-    //
-    //    const TEST_PI_SIZE: usize = super::PI_SIZE + WIDTH + 3;
-    //
-    //    fn perm(values: &mut [BlsScalar]) {
-    //        let mut strategy = ScalarStrategy::new();
-    //        strategy.perm(values);
-    //    }
-    //
-    //    fn gen_transcript() -> Transcript {
-    //        Transcript::new(b"hades-plonk")
-    //    }
+    const TEST_PI_SIZE: usize = super::PI_SIZE + WIDTH + 3;
+
+    fn perm(values: &mut [BlsScalar]) {
+        let mut strategy = ScalarStrategy::new();
+        strategy.perm(values);
+    }
+
+    fn gen_transcript() -> Transcript {
+        Transcript::new(b"hades-plonk")
+    }
     //
     //    fn circuit(
     //        domain: &EvaluationDomain<BlsScalar>,
@@ -537,6 +524,18 @@ mod tests {
                     BlsScalar::zero(),
                     BlsScalar::zero(),
                 );
+                /*composer.big_add_gate(
+                    *p,
+                    *o,
+                    zero,
+                    zero,
+                    -BlsScalar::one(),
+                    BlsScalar::one(),
+                    -BlsScalar::one(),
+                    BlsScalar::zero(),
+                    BlsScalar::zero(),
+                    BlsScalar::zero(),
+                );*/
             });
 
             composer.add_dummy_constraints();
@@ -607,78 +606,83 @@ mod tests {
         //        assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
     }
 
-    //    #[test]
-    //    fn poseidon_slice() {
-    //        let public_parameters = srs::setup(4096 * 32, &mut rand::thread_rng());
-    //        let (ck, vk) = srs::trim(&public_parameters, 4096 * 32).unwrap();
-    //        let domain: EvaluationDomain<BlsScalar> = EvaluationDomain::new(4096 * 32).unwrap();
-    //
-    //        // Generate circuit
-    //        let mut base_transcript = gen_transcript();
-    //        let mut composer: StandardComposer = StandardComposer::new();
-    //
-    //        const BITS: usize = WIDTH * 20 - 19;
-    //        const SLICE_PI_SIZE: usize = super::PI_SIZE * (1 + BITS / 2);
-    //
-    //        let mut pi = vec![BlsScalar::zero(); SLICE_PI_SIZE];
-    //
-    //        let data: Vec<BlsScalar> = (0..BITS).map(|_| (&mut rand::thread_rng()).gen()).collect();
-    //        let result = ScalarStrategy::new().poseidon_slice(data.as_slice());
-    //        let result = composer.add_input(result);
-    //
-    //        let vars: Vec<Variable> = data.iter().map(|d| composer.add_input(*d)).collect();
-    //        let (mut composer, _, x) =
-    //            GadgetStrategy::poseidon_slice_gadget(composer, pi.iter_mut(), &vars);
-    //
-    //        let zero = composer.add_input(BlsScalar::zero());
-    //        composer.add_gate(
-    //            result,
-    //            x,
-    //            zero,
-    //            -BlsScalar::one(),
-    //            BlsScalar::one(),
-    //            BlsScalar::one(),
-    //            BlsScalar::zero(),
-    //            BlsScalar::zero(),
-    //        );
-    //
-    //        composer.add_dummy_constraints();
-    //
-    //        let preprocessed_circuit = composer.preprocess(&ck, &mut base_transcript, &domain);
-    //
-    //        // Prove
-    //        let mut transcript = gen_transcript();
-    //        let mut composer: StandardComposer = StandardComposer::new();
-    //
-    //        let mut pi = vec![BlsScalar::zero(); SLICE_PI_SIZE];
-    //
-    //        let data: Vec<BlsScalar> = (0..BITS).map(|_| (&mut rand::thread_rng()).gen()).collect();
-    //        let result = ScalarStrategy::new().poseidon_slice(data.as_slice());
-    //        let result = composer.add_input(result);
-    //
-    //        let vars: Vec<Variable> = data.iter().map(|d| composer.add_input(*d)).collect();
-    //        let (mut composer, _, x) =
-    //            GadgetStrategy::poseidon_slice_gadget(composer, pi.iter_mut(), &vars);
-    //
-    //        let zero = composer.add_input(BlsScalar::zero());
-    //        composer.add_gate(
-    //            result,
-    //            x,
-    //            zero,
-    //            -BlsScalar::one(),
-    //            BlsScalar::one(),
-    //            BlsScalar::one(),
-    //            BlsScalar::zero(),
-    //            BlsScalar::zero(),
-    //        );
-    //
-    //        composer.add_dummy_constraints();
-    //
-    //        let circuit = composer.preprocess(&ck, &mut transcript, &domain);
-    //        let proof = composer.prove(&ck, &circuit, &mut transcript);
-    //
-    //        // Verify
-    //        let mut transcript = base_transcript.clone();
-    //        assert!(proof.verify(&preprocessed_circuit, &mut transcript, &vk, &pi));
-    //    }
+    #[test]
+    fn poseidon_slice() {
+        let public_parameters =
+            PublicParameters::setup(4096 * 32, &mut rand::thread_rng()).unwrap();
+        let (ck, vk) = PublicParameters::trim(&public_parameters, 4096 * 32).unwrap();
+        let domain: EvaluationDomain = EvaluationDomain::new(4096 * 32).unwrap();
+
+        // Generate circuit
+        let mut base_transcript = gen_transcript();
+        let mut composer: StandardComposer = StandardComposer::new();
+
+        const BITS: usize = WIDTH * 20 - 19;
+        const SLICE_PI_SIZE: usize = super::PI_SIZE * (1 + BITS / 2);
+
+        let mut pi = vec![BlsScalar::zero(); SLICE_PI_SIZE];
+
+        let data: Vec<BlsScalar> = (0..BITS)
+            .map(|_| BlsScalar::random(&mut rand::thread_rng()))
+            .collect();
+        let result = ScalarStrategy::new().poseidon_slice(data.as_slice());
+        let result = composer.add_input(result);
+
+        let vars: Vec<Variable> = data.iter().map(|d| composer.add_input(*d)).collect();
+        let (mut composer, _, x) =
+            GadgetStrategy::poseidon_slice_gadget(composer, pi.iter_mut(), &vars);
+
+        let zero = composer.add_input(BlsScalar::zero());
+        composer.add_gate(
+            result,
+            x,
+            zero,
+            -BlsScalar::one(),
+            BlsScalar::one(),
+            BlsScalar::one(),
+            BlsScalar::zero(),
+            BlsScalar::zero(),
+        );
+
+        composer.add_dummy_constraints();
+
+        let preprocessed_circuit = composer.preprocess(&ck, &mut base_transcript, &domain);
+
+        // Prove
+        let mut transcript = gen_transcript();
+        let mut composer: StandardComposer = StandardComposer::new();
+
+        let mut pi = vec![BlsScalar::zero(); SLICE_PI_SIZE];
+
+        let data: Vec<BlsScalar> = (0..BITS)
+            .map(|_| BlsScalar::random(&mut rand::thread_rng()))
+            .collect();
+        let result = ScalarStrategy::new().poseidon_slice(data.as_slice());
+        let result = composer.add_input(result);
+
+        let vars: Vec<Variable> = data.iter().map(|d| composer.add_input(*d)).collect();
+        let (mut composer, _, x) =
+            GadgetStrategy::poseidon_slice_gadget(composer, pi.iter_mut(), &vars);
+
+        let zero = composer.add_input(BlsScalar::zero());
+        composer.add_gate(
+            result,
+            x,
+            zero,
+            -BlsScalar::one(),
+            BlsScalar::one(),
+            BlsScalar::one(),
+            BlsScalar::zero(),
+            BlsScalar::zero(),
+        );
+
+        composer.add_dummy_constraints();
+
+        let circuit = composer.preprocess(&ck, &mut transcript, &domain);
+        let proof = composer.prove(&ck, &circuit, &mut transcript);
+
+        // Verify
+        let mut transcript = base_transcript.clone();
+        assert!(proof.verify(&preprocessed_circuit, &mut transcript, &vk, &pi));
+    }
 }
