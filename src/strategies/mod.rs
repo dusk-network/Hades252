@@ -132,20 +132,20 @@ pub trait Strategy<T: Clone> {
     fn perm(&mut self, data: &mut [T]) {
         let mut constants_iter = ROUND_CONSTANTS.iter();
 
-        //// Apply R_f full rounds
-        //for _ in 0..TOTAL_FULL_ROUNDS / 2 {
-        self.apply_full_round(&mut constants_iter, data);
-        //}
+        // Apply R_f full rounds
+        for _ in 0..TOTAL_FULL_ROUNDS / 2 {
+            self.apply_full_round(&mut constants_iter, data);
+        }
 
-        //// Apply R_P partial rounds
-        //for _ in 0..PARTIAL_ROUNDS {
-        //    self.apply_partial_round(&mut constants_iter, data);
-        //}
+        // Apply R_P partial rounds
+        for _ in 0..PARTIAL_ROUNDS {
+            self.apply_partial_round(&mut constants_iter, data);
+        }
 
-        //// Apply R_f full rounds
-        //for _ in 0..TOTAL_FULL_ROUNDS / 2 {
-        //    self.apply_full_round(&mut constants_iter, data);
-        //}
+        // Apply R_f full rounds
+        for _ in 0..TOTAL_FULL_ROUNDS / 2 {
+            self.apply_full_round(&mut constants_iter, data);
+        }
     }
 
     /// Perform a poseidon hash
