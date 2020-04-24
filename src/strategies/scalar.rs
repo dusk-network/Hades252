@@ -14,9 +14,7 @@ impl ScalarStrategy {
 
 impl Strategy<BlsScalar> for ScalarStrategy {
     fn quintic_s_box(&mut self, value: &mut BlsScalar) {
-        let s = *value;
-
-        *value = s * s * s * s * s;
+        value.pow(&[5u64, 0, 0, 0]);
     }
 
     fn mul_matrix(&mut self, values: &mut [BlsScalar]) {
@@ -36,6 +34,7 @@ impl Strategy<BlsScalar> for ScalarStrategy {
         I: Iterator<Item = &'b BlsScalar>,
     {
         words.iter_mut().for_each(|w| {
+            // XXX: Shouldn't it follow the impl of gadget returning err if we get out of constants?
             *w += constants.next().unwrap_or(&BlsScalar::one());
         });
     }
