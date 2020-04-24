@@ -14,7 +14,9 @@ impl ScalarStrategy {
 
 impl Strategy<BlsScalar> for ScalarStrategy {
     fn quintic_s_box(&mut self, value: &mut BlsScalar) {
-        value.pow(&[5u64, 0, 0, 0]);
+        // XXX: Check speed difference between this and pow fn
+        let s = *value;
+        *value = s * s * s * s * s;
     }
 
     fn mul_matrix(&mut self, values: &mut [BlsScalar]) {

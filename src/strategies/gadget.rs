@@ -145,7 +145,7 @@ where
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();
 
-        let v = *value;
+        let v = value.clone();
 
         (0..2).for_each(|_| {
             self.push_pi(BlsScalar::zero());
@@ -474,7 +474,6 @@ mod tests {
         const CAPACITY: usize = 2048;
 
         fn hades() -> ([BlsScalar; WIDTH], [BlsScalar; WIDTH]) {
-            //let mut input = [BlsScalar::one() + BlsScalar::one(); WIDTH];
             let mut input = [BlsScalar::zero(); WIDTH];
             input
                 .iter_mut()
@@ -482,7 +481,6 @@ mod tests {
             let mut output = [BlsScalar::zero(); WIDTH];
             output.copy_from_slice(&input);
             ScalarStrategy::new().perm(&mut output);
-
             (input, output)
         }
 
@@ -506,10 +504,15 @@ mod tests {
                 *v = composer.add_input(*o);
             });
 
-            perm.copy_from_slice(&i_var);
+            // Apply Hades gadget strategy.
             let (mut composer, _) =
                 GadgetStrategy::hades_gadget(composer, pi.iter_mut(), &mut i_var);
-            perm.iter().zip(o_var.iter()).for_each(|(p, o)| {
+
+            // Copy the result of the permutation into the perm.
+            perm.copy_from_slice(&i_var);
+
+            // Check that the Gadget perm results = Scalar perm results
+            i_var.iter().zip(o_var.iter()).for_each(|(p, o)| {
                 composer.add_gate(
                     *p,
                     *o,
@@ -523,7 +526,6 @@ mod tests {
             });
 
             composer.add_dummy_constraints();
-            //composer.check_circuit_satisfied();
             (composer, pi)
         }
 
