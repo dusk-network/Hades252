@@ -1,14 +1,14 @@
 use super::Strategy;
 use crate::{mds_matrix::MDS_MATRIX, BlsScalar, WIDTH};
 
-use plonk::constraint_system::standard::composer::StandardComposer;
+use plonk::constraint_system::composer::StandardComposer;
 use plonk::constraint_system::variable::Variable;
 //
 //use num_traits::{One, Zero};
 //use plonk::cs::{composer::StandardComposer, constraint_system::Variable};
 //
 #[cfg(feature = "trace")]
-use {plonk::constraint_system::standard::Composer, tracing::trace};
+use tracing::trace;
 //
 /// Size of the generated public inputs for the permutation gadget
 pub const PI_SIZE: usize = 1736;
@@ -157,6 +157,7 @@ where
                 BlsScalar::zero(),
             )
         });
+        //println!("quintic sbox1 at gate: {}", self.cs.circuit_size());
 
         self.push_pi(BlsScalar::zero());
         *value = self.cs.mul(
@@ -166,6 +167,7 @@ where
             BlsScalar::zero(),
             BlsScalar::zero(),
         );
+        //println!("quintic sbox2 at gate: {}", self.cs.circuit_size());
 
         #[cfg(feature = "trace")]
         {
@@ -388,13 +390,13 @@ mod tests {
     use std::mem;
 
     use merlin::Transcript;
-    use plonk::commitment_scheme::kzg10::key::ProverKey;
+    //use plonk::commitment_scheme::kzg10::key::ProverKey;
     use plonk::commitment_scheme::kzg10::PublicParameters;
-    use plonk::constraint_system::standard::proof::Proof;
-    use plonk::constraint_system::standard::{Composer, PreProcessedCircuit, StandardComposer};
     use plonk::constraint_system::variable::Variable;
+    use plonk::constraint_system::StandardComposer;
     use plonk::fft::EvaluationDomain;
-    use rand::Rng;
+    //use plonk::proof_system::{PreProcessedCircuit, Proof};
+    //use rand::Rng;
 
     const TEST_PI_SIZE: usize = super::PI_SIZE + WIDTH + 3;
 
@@ -471,17 +473,12 @@ mod tests {
     fn hades_preimage() {
         const CAPACITY: usize = 2048;
 
-        fn gen_random_bls_scalar() -> BlsScalar {
-            let mut bytes = [0x00u8; 64];
-            (&mut rand::thread_rng()).fill(&mut bytes);
-
-            BlsScalar::from_bytes_wide(&bytes)
-        }
-
         fn hades() -> ([BlsScalar; WIDTH], [BlsScalar; WIDTH]) {
+            //let mut input = [BlsScalar::one() + BlsScalar::one(); WIDTH];
             let mut input = [BlsScalar::zero(); WIDTH];
-            input.iter_mut().for_each(|s| *s = gen_random_bls_scalar());
-
+            input
+                .iter_mut()
+                .for_each(|s| *s = BlsScalar::random(&mut rand::thread_rng()));
             let mut output = [BlsScalar::zero(); WIDTH];
             output.copy_from_slice(&input);
             ScalarStrategy::new().perm(&mut output);
@@ -512,7 +509,6 @@ mod tests {
             perm.copy_from_slice(&i_var);
             let (mut composer, _) =
                 GadgetStrategy::hades_gadget(composer, pi.iter_mut(), &mut i_var);
-
             perm.iter().zip(o_var.iter()).for_each(|(p, o)| {
                 composer.add_gate(
                     *p,
@@ -524,41 +520,26 @@ mod tests {
                     BlsScalar::zero(),
                     BlsScalar::zero(),
                 );
-                /*composer.big_add_gate(
-                    *p,
-                    *o,
-                    zero,
-                    zero,
-                    -BlsScalar::one(),
-                    BlsScalar::one(),
-                    -BlsScalar::one(),
-                    BlsScalar::zero(),
-                    BlsScalar::zero(),
-                    BlsScalar::zero(),
-                );*/
             });
 
             composer.add_dummy_constraints();
-
+            //composer.check_circuit_satisfied();
             (composer, pi)
         }
 
+        // Setup OG params.
         let public_parameters = PublicParameters::setup(CAPACITY, &mut rand::thread_rng()).unwrap();
-
         let (ck, vk) = public_parameters.trim(CAPACITY).unwrap();
         let domain = EvaluationDomain::new(CAPACITY).unwrap();
 
-        // Preprocess circuit
         let (i, o) = hades();
-        let mut composer = new_composer(i, o).0;
-        let mut transcript = Transcript::new(b"hades-gadget-test");
+        let (mut composer, pi) = new_composer(i, o);
+        let mut transcript = gen_transcript();
+        // Preprocess circuit
         let circuit = composer.preprocess(&ck, &mut transcript, &domain);
 
         // Prove
-        let (i, o) = hades();
-        let (mut composer, pi) = new_composer(i, o);
-        let proof_circuit = composer.preprocess(&ck, &mut transcript, &domain);
-        let proof = composer.prove(&ck, &proof_circuit, &mut transcript.clone());
+        let proof = composer.prove(&ck, &circuit, &mut transcript.clone());
 
         // Verify
         assert!(proof.verify(&circuit, &mut transcript.clone(), &vk, pi.as_slice()));
