@@ -57,6 +57,10 @@ mod test {
         // Check each element is non-zero
         let zero = BlsScalar::zero();
         let has_zero = ROUND_CONSTANTS.iter().any(|&x| x == zero);
+        for ctant in ROUND_CONSTANTS.iter() {
+            let bytes = ctant.to_bytes();
+            assert!(&BlsScalar::from_bytes(&bytes).unwrap() == ctant);
+        }
         assert!(!has_zero);
     }
 }
