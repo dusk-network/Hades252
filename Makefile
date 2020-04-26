@@ -16,13 +16,9 @@ help: ## Display this help screen
 	@grep -h -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 doc: ## Generate documentation
-	@cargo rustdoc --lib
+	@cargo +nightly rustdoc --lib --features nightly_docs
 
 doc-internal: ## Generate documentation with private items
-	@cargo rustdoc --lib -- --document-private-items
-
-publish-doc: ### Publish the documentation as github pages
-	@$(call generate_docs, $(shell mktemp -d)) && \
-	git push -f https://github.com/dusk-network/$(REPO_NAME) gh-pages
+	@cargo +nightly rustdoc --lib -- --document-private-items --features nightly_docs
 
 .PHONY: help doc doc-internal publish-doc
