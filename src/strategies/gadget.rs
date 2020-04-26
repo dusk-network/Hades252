@@ -28,6 +28,7 @@ where
     P: Iterator<Item = &'a mut BlsScalar>,
 {
     /// Constructs a new `GadgetStrategy` with the constraint system.
+    /// In this case, the CS is embedded inside of a plonk `StandardComposer`.
     pub fn new(cs: StandardComposer, pi_iter: P) -> Self {
         GadgetStrategy {
             pi_len: 0,
@@ -41,7 +42,8 @@ where
         (self.cs, self.pi_iter)
     }
 
-    /// Perform the hades permutation on a plonk circuit
+    /// Perform the hades permutation on a plonk circuit given a set of Public
+    /// Inputs and a set of Variables used as inputs.
     pub fn hades_gadget(
         composer: StandardComposer,
         pi: P,
@@ -142,6 +144,7 @@ where
         }
     }
 
+    /// Adds a constraint for each matrix coefficient multiplication
     fn mul_matrix(&mut self, values: &mut [Variable]) {
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();
@@ -214,7 +217,7 @@ where
         }
     }
 
-    /// Multiply the values for MDS matrix.
+    /// Multiply the values for MDS matrix in the partial round application process.
     fn mul_matrix_partial_round(&mut self, constants: &[BlsScalar], values: &mut [Variable]) {
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();
