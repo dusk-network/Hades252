@@ -1,7 +1,3 @@
-//use super::Fq;
-//use std::{fs::File, io::prelude::*};
-//
-//use num_traits::{One, Zero};
 use super::BlsScalar;
 use std::fs;
 use std::io::Write;
