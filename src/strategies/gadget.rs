@@ -330,7 +330,6 @@ mod tests {
         ) -> (StandardComposer, Vec<BlsScalar>) {
             let mut perm: [Variable; WIDTH] = [unsafe { mem::zeroed() }; WIDTH];
             let mut composer = StandardComposer::new();
-            let mut pi = vec![BlsScalar::zero(); CAPACITY];
 
             let zero = composer.add_input(BlsScalar::zero());
 
