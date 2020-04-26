@@ -3,7 +3,7 @@
 //!
 //! The constants were originally computed using:
 //! https://extgit.iaik.tugraz.at/krypto/hadesmimc/blob/master/code/calc_round_numbers.py
-//! and then mapped onto `Scalar` in the Ristretto scalar field.
+//! and then mapped onto `BlsScalar` in the Bls12_381 scalar field.
 #![allow(non_snake_case)]
 use crate::BlsScalar;
 
@@ -15,8 +15,8 @@ lazy_static! {
   /// `ROUND_CONSTANTS` constists on a static reference
   /// that points to the pre-loaded 960 Fq constants.
   ///
-  /// This 960 `Fq` constants are loaded from `ark.bin`
-  /// where all of the `Fq` are represented in bytes.
+  /// This 960 `BlsScalar` constants are loaded from `ark.bin`
+  /// where all of the `BlsScalar`s are represented in bytes.
   ///
   /// This round constants have been taken from:
   /// https://extgit.iaik.tugraz.at/krypto/hadesmimc/blob/master/code/calc_round_numbers.py
