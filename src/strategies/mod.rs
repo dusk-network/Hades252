@@ -1,10 +1,11 @@
-////! This module contains an implementation of the `Hades252`
-////! strategy algorithm specifically designed to work outside of
-////! Rank 1 Constraint Systems (R1CS).
-////!
-////! The inputs of the permutation function have to be explicitly
-////! over the Fq Field of the curve25519 so working over
-////! `Fp = 2^252 + 27742317777372353535851937790883648493`.
+//! This module contains an implementation of the `Hades252`
+//! strategy algorithm specifically designed to work outside of
+//! Rank 1 Constraint Systems (R1CS) or other custom Constraint
+//! Systems such as Add/Mul/Custom plonk gate-circuits.
+//!
+//! The inputs of the permutation function have to be explicitly
+//! over the Scalar Field of the bls12_381 curve so working over
+//! `Fq = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001`.
 use crate::{
     round_constants::ROUND_CONSTANTS, BlsScalar, PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS, WIDTH,
 };
@@ -20,14 +21,15 @@ pub use scalar::ScalarStrategy;
 
 /// Defines the Hades252 strategy algorithm.
 pub trait Strategy<T: Clone> {
-    /// Computes `input ^ 5 (mod Fp)`
+    /// Computes `input ^ 5 (mod Fq)`
     ///
     /// The modulo depends on the input you use. In our case
-    /// the modulo is done in respect of the `curve25519 scalar field`
-    ///  == `2^252 + 27742317777372353535851937790883648493`.
+    /// the modulo is done in respect of the `bls12_381 scalar field`
+    ///  == `0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001`.
     fn quintic_s_box(&mut self, value: &mut T);
 
-    /// Multiply the values for MDS matrix.
+    /// Multiply the values for MDS matrix during the
+    /// full rounds application.
     fn mul_matrix(&mut self, values: &mut [T]);
 
     /// Add round keys to a set of `StrategyInput`.
@@ -41,7 +43,8 @@ pub trait Strategy<T: Clone> {
     where
         I: Iterator<Item = &'b BlsScalar>;
 
-    /// Multiply the values for MDS matrix.
+    /// Multiply the values for MDS matrix during the
+    /// partial rounds application.
     fn mul_matrix_partial_round(&mut self, constants: &[BlsScalar], values: &mut [T]) {
         let size = values.len() - 1;
         self.add_round_key(&mut constants.iter(), &mut values[0..size]);
