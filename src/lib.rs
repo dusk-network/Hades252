@@ -1,11 +1,14 @@
 //#![feature(trait_alias)]
 //#![feature(external_doc)]
-//#![deny(missing_docs)]
-//#![doc(include = "../README.md")]
-//#![feature(test)]
+//!
+#![deny(missing_docs)]
+#![cfg_attr(feature = "nightly_docs", feature(external_doc))]
+#![cfg_attr(feature = "nightly_docs", doc(include = "../README.md"))]
+
 mod mds_matrix;
 mod round_constants;
 
+/// Strategies implemented for the Hades252 algorithm.
 pub mod strategies;
 
 /// Total ammount of full rounds that will be applied.
@@ -21,7 +24,4 @@ pub const WIDTH: usize = 5;
 
 pub use dusk_bls12_381::Scalar as BlsScalar;
 
-//pub use algebra::curves::bls12_381::Bls12_381;
-//pub use algebra::curves::jubjub::JubJubProjective;
-//pub use algebra::fields::jubjub::fq::Fq;
 pub use strategies::{GadgetStrategy, ScalarStrategy, Strategy};
