@@ -21,8 +21,6 @@ where
     pub cs: StandardComposer,
     /// Mutable iterator over the public inputs
     pub pi_iter: P,
-    /// Variable representing zero
-    pub zero: Variable,
 }
 
 impl<'a, P> GadgetStrategy<'a, P>
@@ -30,13 +28,11 @@ where
     P: Iterator<Item = &'a mut BlsScalar>,
 {
     /// Constructs a new `GadgetStrategy` with the constraint system.
-    pub fn new(mut cs: StandardComposer, pi_iter: P) -> Self {
-        let zero = cs.add_input(BlsScalar::zero());
+    pub fn new(cs: StandardComposer, pi_iter: P) -> Self {
         GadgetStrategy {
             pi_len: 0,
             cs,
             pi_iter,
-            zero,
         }
     }
 
@@ -150,8 +146,8 @@ where
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();
 
-        let mut product = [self.zero; WIDTH];
-        let mut z3 = self.zero;
+        let mut product = [self.cs.zero_var; WIDTH];
+        let mut z3 = self.cs.zero_var;
 
         for j in 0..WIDTH {
             for k in 0..WIDTH / 4 {
@@ -223,8 +219,8 @@ where
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();
 
-        let mut product = [self.zero; WIDTH];
-        let mut z3 = self.zero;
+        let mut product = [self.cs.zero_var; WIDTH];
+        let mut z3 = self.cs.zero_var;
 
         for j in 0..WIDTH {
             for k in 0..WIDTH / 4 {
@@ -310,7 +306,7 @@ where
             self.push_pi(BlsScalar::zero());
             *w = self.cs.add(
                 (BlsScalar::one(), *w),
-                (BlsScalar::zero(), self.zero),
+                (BlsScalar::zero(), self.cs.zero_var),
                 p,
                 BlsScalar::zero(),
             );
@@ -328,15 +324,15 @@ where
 
     /// Perform a slice strategy
     fn poseidon_slice(&mut self, data: &[Variable]) -> Variable {
-        let mut perm = [self.zero; WIDTH];
+        let mut perm = [self.cs.zero_var; WIDTH];
 
-        let mut elements = [self.zero; WIDTH - 2];
+        let mut elements = [self.cs.zero_var; WIDTH - 2];
         elements
             .iter_mut()
             .enumerate()
             .for_each(|(i, e)| *e = self.cs.add_input(BlsScalar::from((i + 1) as u64)));
 
-        data.chunks(WIDTH - 2).fold(self.zero, |r, chunk| {
+        data.chunks(WIDTH - 2).fold(self.cs.zero_var, |r, chunk| {
             perm[0] = elements[chunk.len() - 1];
             perm[1] = r;
 
