@@ -11,48 +11,23 @@ pub const PI_SIZE: usize = 1737;
 
 /// Implements a Hades252 strategy for `Variable` as input values.
 /// Requires a reference to a `ConstraintSystem`.
-pub struct GadgetStrategy<'a, P>
-where
-    P: Iterator<Item = &'a mut BlsScalar>,
-{
-    /// Counter over pushed PI
-    pub pi_len: usize,
+pub struct GadgetStrategy<'a> {
     /// A reference to the constraint system used by the gadgets
-    pub cs: StandardComposer,
-    /// Mutable iterator over the public inputs
-    pub pi_iter: P,
+    pub cs: &'a mut StandardComposer,
 }
 
-impl<'a, P> GadgetStrategy<'a, P>
-where
-    P: Iterator<Item = &'a mut BlsScalar>,
-{
+impl<'a> GadgetStrategy<'a> {
     /// Constructs a new `GadgetStrategy` with the constraint system.
-    /// In this case, the CS is embedded inside of a plonk `StandardComposer`.
-    pub fn new(cs: StandardComposer, pi_iter: P) -> Self {
-        GadgetStrategy {
-            pi_len: 0,
-            cs,
-            pi_iter,
-        }
+    pub fn new(cs: &'a mut StandardComposer) -> Self {
+        GadgetStrategy { cs }
     }
 
-    /// Return the inner iterator over public inputs
-    pub fn into_inner(self) -> (StandardComposer, P) {
-        (self.cs, self.pi_iter)
-    }
-
-    /// Perform the hades permutation on a plonk circuit given a set of Public
-    /// Inputs and a set of Variables used as inputs.
-    pub fn hades_gadget(
-        composer: StandardComposer,
-        pi: P,
-        x: &mut [Variable],
-    ) -> (StandardComposer, P) {
+    /// Perform the hades permutation on a plonk circuit
+    pub fn hades_gadget(composer: &'a mut StandardComposer, x: &mut [Variable]) {
         #[cfg(feature = "trace")]
         let circuit_size = composer.circuit_size();
 
-        let mut strategy = GadgetStrategy::new(composer, pi);
+        let mut strategy = GadgetStrategy::new(composer);
 
         strategy.perm(x);
 
@@ -64,48 +39,27 @@ where
                 WIDTH
             );
         }
-
-        strategy.into_inner()
     }
 
     /// Perform the poseidon hash on a plonk circuit
     pub fn poseidon_gadget(
-        composer: StandardComposer,
-        pi: P,
-        x: &mut [Variable],
-    ) -> (StandardComposer, P, Variable) {
-        let (composer, pi) = GadgetStrategy::hades_gadget(composer, pi, x);
-        (composer, pi, x[1])
+        composer: &'a mut StandardComposer,
+        inputs: &mut [Variable],
+    ) -> Variable {
+        GadgetStrategy::hades_gadget(composer, inputs);
+        inputs[1]
     }
 
     /// Perform the poseidon slice hash on a plonk circuit
-    pub fn poseidon_slice_gadget(
-        composer: StandardComposer,
-        pi: P,
-        x: &[Variable],
-    ) -> (StandardComposer, P, Variable) {
-        let mut strategy = GadgetStrategy::new(composer, pi);
+    pub fn poseidon_slice_gadget(composer: &'a mut StandardComposer, x: &[Variable]) -> Variable {
+        let mut strategy = GadgetStrategy::new(composer);
 
-        let x = strategy.poseidon_slice(x);
-
-        let (composer, pi) = strategy.into_inner();
-
-        (composer, pi, x)
-    }
-
-    fn push_pi(&mut self, p: BlsScalar) {
-        self.pi_len += 1;
-        self.pi_iter
-            .next()
-            .map(|s| *s = p)
-            .expect("Public inputs iterator depleted");
+        let res_var: Variable = strategy.poseidon_slice(x);
+        res_var
     }
 }
 
-impl<'a, P> Strategy<Variable> for GadgetStrategy<'a, P>
-where
-    P: Iterator<Item = &'a mut BlsScalar>,
-{
+impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
     fn quintic_s_box(&mut self, value: &mut Variable) {
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();
@@ -113,7 +67,6 @@ where
         let v = value.clone();
 
         (0..2).for_each(|_| {
-            self.push_pi(BlsScalar::zero());
             *value = self.cs.mul(
                 BlsScalar::one(),
                 *value,
@@ -122,9 +75,7 @@ where
                 BlsScalar::zero(),
             )
         });
-        //println!("quintic sbox1 at gate: {}", self.cs.circuit_size());
 
-        self.push_pi(BlsScalar::zero());
         *value = self.cs.mul(
             BlsScalar::one(),
             *value,
@@ -132,7 +83,6 @@ where
             BlsScalar::zero(),
             BlsScalar::zero(),
         );
-        //println!("quintic sbox2 at gate: {}", self.cs.circuit_size());
 
         #[cfg(feature = "trace")]
         {
@@ -156,7 +106,6 @@ where
             for k in 0..WIDTH / 4 {
                 let i = 4 * k;
 
-                self.push_pi(BlsScalar::zero());
                 let z1 = self.cs.add(
                     (MDS_MATRIX[j][i], values[i]),
                     (MDS_MATRIX[j][i + 1], values[i + 1]),
@@ -164,7 +113,6 @@ where
                     BlsScalar::zero(),
                 );
 
-                self.push_pi(BlsScalar::zero());
                 let z2 = self.cs.add(
                     (MDS_MATRIX[j][i + 2], values[i + 2]),
                     (MDS_MATRIX[j][i + 3], values[i + 3]),
@@ -172,7 +120,6 @@ where
                     BlsScalar::zero(),
                 );
 
-                self.push_pi(BlsScalar::zero());
                 z3 = self.cs.add(
                     (BlsScalar::one(), z1),
                     (BlsScalar::one(), z2),
@@ -184,7 +131,6 @@ where
             // TODO - Replace by compiler constant evaluation
             if WIDTH < 4 {
                 for k in 0..WIDTH {
-                    self.push_pi(BlsScalar::zero());
                     product[k] = self.cs.add(
                         (BlsScalar::one(), product[k]),
                         (MDS_MATRIX[k][j], values[j]),
@@ -193,7 +139,6 @@ where
                     );
                 }
             } else if WIDTH & 1 == 1 {
-                self.push_pi(BlsScalar::zero());
                 product[j] = self.cs.add(
                     (BlsScalar::one(), z3),
                     (MDS_MATRIX[j][WIDTH - 1], values[WIDTH - 1]),
@@ -230,7 +175,6 @@ where
                 let i = 4 * k;
 
                 let q_c = constants[i] * MDS_MATRIX[j][i] + constants[i + 1] * MDS_MATRIX[j][i + 1];
-                self.push_pi(BlsScalar::zero());
                 let z1 = self.cs.add(
                     (MDS_MATRIX[j][i], values[i]),
                     (MDS_MATRIX[j][i + 1], values[i + 1]),
@@ -240,7 +184,6 @@ where
 
                 let q_c = constants[i + 2] * MDS_MATRIX[j][i + 2]
                     + constants[i + 3] * MDS_MATRIX[j][i + 3];
-                self.push_pi(BlsScalar::zero());
                 let z2 = self.cs.add(
                     (MDS_MATRIX[j][i + 2], values[i + 2]),
                     (MDS_MATRIX[j][i + 3], values[i + 3]),
@@ -248,7 +191,6 @@ where
                     BlsScalar::zero(),
                 );
 
-                self.push_pi(BlsScalar::zero());
                 z3 = self.cs.add(
                     (BlsScalar::one(), z1),
                     (BlsScalar::one(), z2),
@@ -260,7 +202,6 @@ where
             // TODO - Replace by compiler constant evaluation
             if WIDTH < 4 {
                 for k in 0..WIDTH {
-                    self.push_pi(BlsScalar::zero());
                     product[k] = self.cs.add(
                         (BlsScalar::one(), product[k]),
                         (MDS_MATRIX[k][j], values[j]),
@@ -269,7 +210,6 @@ where
                     );
                 }
             } else if WIDTH & 1 == 1 {
-                self.push_pi(BlsScalar::zero());
                 product[j] = self.cs.add(
                     (BlsScalar::one(), z3),
                     (MDS_MATRIX[j][WIDTH - 1], values[WIDTH - 1]),
@@ -306,7 +246,6 @@ where
                 .cloned()
                 .expect("Hades252 out of ARK constants");
 
-            self.push_pi(BlsScalar::zero());
             *w = self.cs.add(
                 (BlsScalar::one(), *w),
                 (BlsScalar::zero(), self.cs.zero_var),
@@ -344,7 +283,8 @@ where
                 .zip(perm.iter_mut().skip(2))
                 .for_each(|(c, p)| *p = *c);
 
-            self.poseidon(&mut perm)
+            let var_res: Variable = self.poseidon(&mut perm);
+            var_res
         })
     }
 }
@@ -406,8 +346,7 @@ mod tests {
             });
 
             // Apply Hades gadget strategy.
-            let (mut composer, _) =
-                GadgetStrategy::hades_gadget(composer, pi.iter_mut(), &mut i_var);
+            GadgetStrategy::hades_gadget(&mut composer, &mut i_var);
 
             // Copy the result of the permutation into the perm.
             perm.copy_from_slice(&i_var);
@@ -427,7 +366,8 @@ mod tests {
             });
 
             composer.add_dummy_constraints();
-            (composer, pi)
+            //let pub_inp = composer.public_inputs().clone();
+            (composer, vec![BlsScalar::zero()])
         }
 
         // Setup OG params.
@@ -500,9 +440,6 @@ mod tests {
         let mut composer: StandardComposer = StandardComposer::new();
 
         const BITS: usize = WIDTH * 20 - 19;
-        const SLICE_PI_SIZE: usize = super::PI_SIZE * (1 + BITS / 2);
-
-        let mut pi = vec![BlsScalar::zero(); SLICE_PI_SIZE];
 
         let data: Vec<BlsScalar> = (0..BITS)
             .map(|_| BlsScalar::random(&mut rand::thread_rng()))
@@ -510,15 +447,14 @@ mod tests {
         let result = ScalarStrategy::new().poseidon_slice(data.as_slice());
         let result = composer.add_input(result);
 
-        let vars: Vec<Variable> = data.iter().map(|d| composer.add_input(*d)).collect();
-        let (mut composer, _, x) =
-            GadgetStrategy::poseidon_slice_gadget(composer, pi.iter_mut(), &vars);
+        let mut vars: Vec<Variable> = data.iter().map(|d| composer.add_input(*d)).collect();
 
-        let zero = composer.add_input(BlsScalar::zero());
+        let x = GadgetStrategy::poseidon_slice_gadget(&mut composer, &mut vars);
+
         composer.add_gate(
             result,
             x,
-            zero,
+            composer.zero_var,
             -BlsScalar::one(),
             BlsScalar::one(),
             BlsScalar::one(),
@@ -531,40 +467,16 @@ mod tests {
         let preprocessed_circuit = composer.preprocess(&ck, &mut base_transcript, &domain);
 
         // Prove
-        let mut transcript = gen_transcript();
-        let mut composer: StandardComposer = StandardComposer::new();
-
-        let mut pi = vec![BlsScalar::zero(); SLICE_PI_SIZE];
-
-        let data: Vec<BlsScalar> = (0..BITS)
-            .map(|_| BlsScalar::random(&mut rand::thread_rng()))
-            .collect();
-        let result = ScalarStrategy::new().poseidon_slice(data.as_slice());
-        let result = composer.add_input(result);
-
-        let vars: Vec<Variable> = data.iter().map(|d| composer.add_input(*d)).collect();
-        let (mut composer, _, x) =
-            GadgetStrategy::poseidon_slice_gadget(composer, pi.iter_mut(), &vars);
-
-        let zero = composer.add_input(BlsScalar::zero());
-        composer.add_gate(
-            result,
-            x,
-            zero,
-            -BlsScalar::one(),
-            BlsScalar::one(),
-            BlsScalar::one(),
-            BlsScalar::zero(),
-            BlsScalar::zero(),
-        );
-
-        composer.add_dummy_constraints();
-
-        let circuit = composer.preprocess(&ck, &mut transcript, &domain);
-        let proof = composer.prove(&ck, &circuit, &mut transcript);
+        let circuit = composer.preprocess(&ck, &mut base_transcript, &domain);
+        let proof = composer.prove(&ck, &circuit, &mut base_transcript.clone());
 
         // Verify
         let mut transcript = base_transcript.clone();
-        assert!(proof.verify(&preprocessed_circuit, &mut transcript, &vk, &pi));
+        assert!(proof.verify(
+            &preprocessed_circuit,
+            &mut transcript,
+            &vk,
+            &vec![BlsScalar::zero()]
+        ));
     }
 }
