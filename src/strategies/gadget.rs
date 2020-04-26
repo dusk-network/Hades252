@@ -1,18 +1,14 @@
 use super::Strategy;
 use crate::{mds_matrix::MDS_MATRIX, BlsScalar, WIDTH};
-
 use dusk_plonk::constraint_system::composer::StandardComposer;
 use dusk_plonk::constraint_system::variable::Variable;
-//
-//use num_traits::{One, Zero};
-//use plonk::cs::{composer::StandardComposer, constraint_system::Variable};
-//
+
 #[cfg(feature = "trace")]
 use tracing::trace;
-//
+
 /// Size of the generated public inputs for the permutation gadget
-pub const PI_SIZE: usize = 1736;
-//
+pub const PI_SIZE: usize = 1737;
+
 /// Implements a Hades252 strategy for `Variable` as input values.
 /// Requires a reference to a `ConstraintSystem`.
 pub struct GadgetStrategy<'a, P>
@@ -97,35 +93,6 @@ where
         let (composer, pi) = strategy.into_inner();
 
         (composer, pi, x)
-    }
-
-    /// Constrain x == h, being h a public input
-    pub fn constrain_gadget(
-        mut composer: StandardComposer,
-        mut pi: P,
-        x: &[Variable],
-        h: &[BlsScalar],
-    ) -> (StandardComposer, P) {
-        let zero = composer.add_input(BlsScalar::zero());
-
-        x.iter().zip(h.iter()).for_each(|(x, h)| {
-            pi.next()
-                .map(|s| *s = *h)
-                .expect("Public inputs iterator depleted");
-
-            composer.add_gate(
-                *x,
-                zero,
-                zero,
-                -BlsScalar::one(),
-                BlsScalar::one(),
-                BlsScalar::one(),
-                BlsScalar::zero(),
-                *h,
-            );
-        });
-
-        (composer, pi)
     }
 
     fn push_pi(&mut self, p: BlsScalar) {
@@ -389,16 +356,11 @@ mod tests {
 
     use std::mem;
 
-    use merlin::Transcript;
-    //use plonk::commitment_scheme::kzg10::key::ProverKey;
     use dusk_plonk::commitment_scheme::kzg10::PublicParameters;
     use dusk_plonk::constraint_system::variable::Variable;
     use dusk_plonk::constraint_system::StandardComposer;
     use dusk_plonk::fft::EvaluationDomain;
-    //use plonk::proof_system::{PreProcessedCircuit, Proof};
-    //use rand::Rng;
-
-    const TEST_PI_SIZE: usize = super::PI_SIZE + WIDTH + 3;
+    use merlin::Transcript;
 
     fn perm(values: &mut [BlsScalar]) {
         let mut strategy = ScalarStrategy::new();
@@ -408,66 +370,6 @@ mod tests {
     fn gen_transcript() -> Transcript {
         Transcript::new(b"hades-plonk")
     }
-    //
-    //    fn circuit(
-    //        domain: &EvaluationDomain<BlsScalar>,
-    //        ck: &Powers<Bls12_381>,
-    //        x: &[BlsScalar],
-    //        h: &[BlsScalar],
-    //    ) -> (
-    //        Transcript,
-    //        PreProcessedCircuit<Bls12_381>,
-    //        StandardComposer,
-    //        [BlsScalar; TEST_PI_SIZE],
-    //    ) {
-    //        let mut transcript = gen_transcript();
-    //        let mut composer: StandardComposer = StandardComposer::new();
-    //
-    //        let mut pi = [BlsScalar::zero(); TEST_PI_SIZE];
-    //        let mut x_var: [Variable; WIDTH] = unsafe { [std::mem::zeroed(); WIDTH] };
-    //        x.iter()
-    //            .zip(x_var.iter_mut())
-    //            .for_each(|(x, v)| *v = composer.add_input(*x));
-    //
-    //        let (composer, pi_iter) = GadgetStrategy::hades_gadget(composer, pi.iter_mut(), &mut x_var);
-    //        assert_eq!(super::PI_SIZE, composer.circuit_size());
-    //
-    //        let (mut composer, mut pi_iter) =
-    //            GadgetStrategy::constrain_gadget(composer, pi_iter, &x_var, h);
-    //
-    //        (0..3).for_each(|_| {
-    //            pi_iter
-    //                .next()
-    //                .map(|s| *s = BlsScalar::zero())
-    //                .expect("Public inputs iterator depleted");
-    //
-    //            composer.add_dummy_constraints();
-    //        });
-    //
-    //        let circuit = composer.preprocess(&ck, &mut transcript, &domain);
-    //        (transcript, circuit, composer, pi)
-    //    }
-    //
-    //    fn prove(
-    //        domain: &EvaluationDomain<BlsScalar>,
-    //        ck: &Powers<Bls12_381>,
-    //        x: &[BlsScalar],
-    //        h: &[BlsScalar],
-    //    ) -> (Proof<Bls12_381>, [BlsScalar; TEST_PI_SIZE]) {
-    //        let (mut transcript, circuit, mut composer, pi) = circuit(domain, ck, x, h);
-    //        let proof = composer.prove(&ck, &circuit, &mut transcript);
-    //        (proof, pi)
-    //    }
-    //
-    //    fn verify(
-    //        transcript: &mut Transcript,
-    //        circuit: &PreProcessedCircuit<Bls12_381>,
-    //        vk: &VerifierKey<Bls12_381>,
-    //        proof: &Proof<Bls12_381>,
-    //        pi: &[BlsScalar],
-    //    ) -> bool {
-    //        proof.verify(&circuit, transcript, vk, &pi.to_vec())
-    //    }
 
     #[test]
     fn hades_preimage() {
@@ -546,47 +448,45 @@ mod tests {
         // Verify
         assert!(proof.verify(&circuit, &mut transcript.clone(), &vk, pi.as_slice()));
 
-        //        let public_parameters = srs::setup(CAPACITY, &mut rand::thread_rng());
-        //        let (ck, vk) = srs::trim(&public_parameters, CAPACITY).unwrap();
-        //        let domain: EvaluationDomain<BlsScalar> = EvaluationDomain::new(CAPACITY).unwrap();
-        //
-        //        let e = [BlsScalar::from(5000u64); WIDTH];
-        //        let mut e_perm = [BlsScalar::from(5000u64); WIDTH];
-        //        perm(&mut e_perm);
-        //
-        //        let (transcript, circuit, _, _) = circuit(&domain, &ck, &e, &e_perm);
-        //
-        //        let x_scalar = BlsScalar::from(31u64);
-        //        let mut x = [BlsScalar::zero(); WIDTH];
-        //        x[1] = x_scalar;
-        //        let mut h = [BlsScalar::zero(); WIDTH];
-        //        h.copy_from_slice(&x);
-        //        perm(&mut h);
-        //
-        //        let y_scalar = BlsScalar::from(30u64);
-        //        let mut y = [BlsScalar::zero(); WIDTH];
-        //        y[1] = y_scalar;
-        //        let mut i = [BlsScalar::zero(); WIDTH];
-        //        i.copy_from_slice(&y);
-        //        perm(&mut i);
-        //
-        //        let (proof, pi) = prove(&domain, &ck, &x, &h);
-        //        assert!(verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
-        //
-        //        let (proof, pi) = prove(&domain, &ck, &y, &i);
-        //        assert!(verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
-        //
-        //        // Wrong pre-image
-        //        let (proof, pi) = prove(&domain, &ck, &y, &h);
-        //        assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
-        //
-        //        // Wrong public image
-        //        let (proof, pi) = prove(&domain, &ck, &x, &i);
-        //        assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
-        //
-        //        // Inconsistent public image
-        //        let (proof, _) = prove(&domain, &ck, &x, &h);
-        //        assert!(!verify(&mut transcript.clone(), &circuit, &vk, &proof, &pi));
+        //------------------------------------------//
+        //                                          //
+        //  Second Proof test with different values //
+        //                                          //
+        //------------------------------------------//
+
+        // Prepare input & output of the permutation for second Proof test
+        let e = [BlsScalar::from(5000u64); WIDTH];
+        let mut e_perm = [BlsScalar::from(5000u64); WIDTH];
+        perm(&mut e_perm);
+
+        // Prove 2 with different values
+        let (mut composer_2, pi2) = new_composer(e, e_perm);
+        let proof2 = composer_2.prove(&ck, &circuit, &mut transcript.clone());
+
+        // Verify 2 with different values
+        assert!(proof2.verify(&circuit, &mut transcript.clone(), &vk, pi2.as_slice()));
+
+        //------------------------------------------//
+        //                                          //
+        //  Third Proof test with wrong values      //
+        //                                          //
+        //------------------------------------------//
+
+        // Generate [31, 0, 0, 0, 0] as real input to the perm but build the
+        // proof with [31, 31, 31, 31, 31]. This should fail on verification
+        // since the Proof contains incorrect statements.
+        let x_scalar = BlsScalar::from(31u64);
+        let mut x = [BlsScalar::zero(); WIDTH];
+        x[1] = x_scalar;
+        let mut h = [BlsScalar::from(31u64); WIDTH];
+        perm(&mut h);
+
+        // Prove 3 with wrong inputs
+        let (mut composer_3, pi3) = new_composer(x, h);
+        let proof3 = composer_3.prove(&ck, &circuit, &mut transcript.clone());
+
+        // Verify 3 with wrong inputs should fail
+        assert!(!proof3.verify(&circuit, &mut transcript.clone(), &vk, pi3.as_slice()));
     }
 
     #[test]
