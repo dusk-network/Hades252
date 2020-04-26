@@ -19,7 +19,7 @@ pub const PARTIAL_ROUNDS: usize = 59;
 /// Maximum input width for the rounds
 pub const WIDTH: usize = 5;
 
-pub use bls12_381::Scalar as BlsScalar;
+pub use dusk_bls12_381::Scalar as BlsScalar;
 
 //pub use algebra::curves::bls12_381::Bls12_381;
 //pub use algebra::curves::jubjub::JubJubProjective;

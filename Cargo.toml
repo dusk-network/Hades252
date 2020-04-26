@@ -13,15 +13,14 @@ trace = ["tracing"]
 
 [dependencies]
 lazy_static = "1.3.0"
-bls12_381 = { git = "https://github.com/dusk-network/bls12_381", branch = "master" }
+dusk-bls12_381 = "0.1.0"
 
 [dependencies.tracing]
 version = "0.1"
 optional = true
 
-[dependencies.plonk]
-git = "https://github.com/dusk-network/plonk"
-branch = "master"
+[dependencies.dusk-plonk]
+version = "0.1.0"
 
 [dev-dependencies]
 rand = "0.7"
@@ -31,7 +30,7 @@ merlin = "2"
 [build-dependencies]
 num-traits = "0.2"
 sha2 = "0.8"
-bls12_381 = { git = "https://github.com/dusk-network/bls12_381", branch = "master" }
+dusk-bls12_381 = "0.1.0"
 
 [profile.release]
 debug = false

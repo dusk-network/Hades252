@@ -1,8 +1,8 @@
 use super::Strategy;
 use crate::{mds_matrix::MDS_MATRIX, BlsScalar, WIDTH};
 
-use plonk::constraint_system::composer::StandardComposer;
-use plonk::constraint_system::variable::Variable;
+use dusk_plonk::constraint_system::composer::StandardComposer;
+use dusk_plonk::constraint_system::variable::Variable;
 //
 //use num_traits::{One, Zero};
 //use plonk::cs::{composer::StandardComposer, constraint_system::Variable};
@@ -391,10 +391,10 @@ mod tests {
 
     use merlin::Transcript;
     //use plonk::commitment_scheme::kzg10::key::ProverKey;
-    use plonk::commitment_scheme::kzg10::PublicParameters;
-    use plonk::constraint_system::variable::Variable;
-    use plonk::constraint_system::StandardComposer;
-    use plonk::fft::EvaluationDomain;
+    use dusk_plonk::commitment_scheme::kzg10::PublicParameters;
+    use dusk_plonk::constraint_system::variable::Variable;
+    use dusk_plonk::constraint_system::StandardComposer;
+    use dusk_plonk::fft::EvaluationDomain;
     //use plonk::proof_system::{PreProcessedCircuit, Proof};
     //use rand::Rng;
 
