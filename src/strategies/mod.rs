@@ -19,7 +19,7 @@ pub use gadget::GadgetStrategy;
 pub use scalar::ScalarStrategy;
 
 /// Defines the Hades252 strategy algorithm.
-pub trait Strategy<T: Clone> {
+pub trait Strategy<T: Clone + Copy> {
     /// Computes `input ^ 5 (mod Fp)`
     ///
     /// The modulo depends on the input you use. In our case
@@ -150,7 +150,7 @@ pub trait Strategy<T: Clone> {
     /// Perform a poseidon hash
     fn poseidon(&mut self, data: &mut [T]) -> T {
         self.perm(data);
-        data[1].clone()
+        data[1]
     }
 
     /// Perform a slice strategy
