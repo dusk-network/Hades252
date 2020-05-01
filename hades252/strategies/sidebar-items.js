@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["gadget","Strategy for zero-knowledge plonk circuits"],["scalar","Strategy for scalars"]],"trait":[["Strategy","Defines the Hades252 strategy algorithm."]]});

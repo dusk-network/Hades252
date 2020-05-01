@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["hades252"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/default/trait.Default.html\" title=\"trait core::default::Default\">Default</a> for <a class=\"struct\" href=\"hades252/strategies/scalar/struct.ScalarStrategy.html\" title=\"struct hades252::strategies::scalar::ScalarStrategy\">ScalarStrategy</a>","synthetic":false,"types":["hades252::strategies::scalar::ScalarStrategy"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
