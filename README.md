@@ -66,20 +66,26 @@ assert_eq!(input.len(), output.len());
 ## Example with permutation of Variables using the `GadgetStrategy`
 ```rust
 //! Proving that we know the pre-image of a hades-252 hash.
-use hades252::{BlsScalar, GadgetStrategy, ScalarStrategy, Strategy, WIDTH};
-use dusk_plonk::constraint_system::variable::Variable;
+use hades252::{BlsScalar, GadgetStrategy, Strategy, WIDTH};
 use dusk_plonk::constraint_system::composer::StandardComposer;
-use dusk_plonk::fft::EvaluationDomain;
-use merlin::Transcript;
-
 
 // Setup OG params.
 let public_parameters = PublicParameters::setup(CAPACITY, &mut rand::thread_rng()).unwrap();
 let (ck, vk) = public_parameters.trim(CAPACITY).unwrap();
 let domain = EvaluationDomain::new(CAPACITY).unwrap();
 
+// Gen composer
+let mut composer = StandardComposer::new();
 
+// Gen inputs
+let mut inputs = [Scalar::one(); WIDTH];
 
+// Call the gadget
+GadgetStrategy::hades_gadget(&mut composer, &mut inputs);
+
+// Now your composer has been filled with a hades permutation
+// inside.
+// Now you can build your proof or keep extending your circuit.
 ```
 
 ## Deviations
