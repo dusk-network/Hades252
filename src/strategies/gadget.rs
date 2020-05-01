@@ -94,6 +94,7 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         }
     }
 
+    /// Adds a constraint for each matrix coefficient multiplication
     fn mul_matrix(&mut self, values: &mut [Variable]) {
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();
@@ -161,7 +162,7 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         }
     }
 
-    /// Multiply the values for MDS matrix.
+    /// Multiply the values for MDS matrix in the partial round application process.
     fn mul_matrix_partial_round(&mut self, constants: &[BlsScalar], values: &mut [Variable]) {
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();

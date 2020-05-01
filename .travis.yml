@@ -4,12 +4,7 @@ cache: cargo
 os:
   - linux
 #  - osx  CodeCov doesn't support it so it's non tested now.
-
-matrix:
-  fast_finish: false
-  include:
-  - rust: nightly
-
+# Include needeed packages (Codecov)
 addons:
   apt:
     packages:
@@ -20,18 +15,24 @@ addons:
       - gcc
       - binutils-dev
 
-# Update nightly and set it for all of the directories.
-before_script:
-  - rustup update nightly
-  - rustup override set nightly
-
-
-# Main build
-script:
-  # Run tests/builds
-  - cargo check
-  - cargo build --release --verbose --all
-  - cargo test --release --verbose --all
+matrix:
+  fast_finish: false
+  include:
+  - rust: stable
+    script:
+      # Run tests/builds
+      - cargo check
+      - cargo build --release --verbose --all
+      - cargo test --release --verbose --all
+  
+  - rust: nightly
+    script:
+      # Run tests/builds
+      - cargo check
+      - cargo build --release --verbose --all
+      - cargo test --release --verbose --all
+      # Build docs
+      - cargo doc --no-deps --features nightly_docs
 
 
 # Send a notification to the Dusk build Status Telegram channel once the CI build completes
@@ -41,8 +42,8 @@ after_script:
 # Upload docs
 after_success:
 - |
-      if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "stable" && "$TRAVIS_PULL_REQUEST" = "false" && "$TRAVIS_BRANCH" == "master" ]]; then
-        cargo doc --no-deps &&
+      if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" && "$TRAVIS_PULL_REQUEST" = "false" && "$TRAVIS_BRANCH" == "master" ]]; then
+        cargo doc --no-deps --features nightly_docs &&
         echo "<meta http-equiv=refresh content=0;url=hades252/index.html>" > target/doc/index.html &&
         git clone https://github.com/davisp/ghp-import.git &&
         ./ghp-import/ghp_import.py -n -p -f -m "Documentation update." -r https://"$GH_TOKEN"@github.com/"$TRAVIS_REPO_SLUG.git" target/doc &&
