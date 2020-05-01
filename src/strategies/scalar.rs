@@ -1,10 +1,7 @@
-use crate::{mds_matrix::MDS_MATRIX, Fq, WIDTH};
-
 use super::Strategy;
+use crate::{mds_matrix::MDS_MATRIX, BlsScalar, WIDTH};
 
-use num_traits::{One, Zero};
-
-/// Implements a Hades252 strategy for `Fq` as input values.
+/// Implements a Hades252 strategy for `BlsScalar` as input values.
 #[derive(Default)]
 pub struct ScalarStrategy {}
 
@@ -15,15 +12,15 @@ impl ScalarStrategy {
     }
 }
 
-impl Strategy<Fq> for ScalarStrategy {
-    fn quintic_s_box(&mut self, value: &mut Fq) {
+impl Strategy<BlsScalar> for ScalarStrategy {
+    fn quintic_s_box(&mut self, value: &mut BlsScalar) {
+        // XXX: Check speed difference between this and pow fn
         let s = *value;
-
         *value = s * s * s * s * s;
     }
 
-    fn mul_matrix(&mut self, values: &mut [Fq]) {
-        let mut result = [Fq::zero(); WIDTH];
+    fn mul_matrix(&mut self, values: &mut [BlsScalar]) {
+        let mut result = [BlsScalar::zero(); WIDTH];
 
         for j in 0..WIDTH {
             for k in 0..WIDTH {
@@ -34,21 +31,22 @@ impl Strategy<Fq> for ScalarStrategy {
         values.copy_from_slice(&result);
     }
 
-    fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [Fq])
+    fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [BlsScalar])
     where
-        I: Iterator<Item = &'b Fq>,
+        I: Iterator<Item = &'b BlsScalar>,
     {
         words.iter_mut().for_each(|w| {
-            *w += constants.next().unwrap_or(&Fq::one());
+            // XXX: Shouldn't it follow the impl of gadget returning err if we get out of constants?
+            *w += constants.next().unwrap_or(&BlsScalar::one());
         });
     }
 
     /// Perform a slice strategy
-    fn poseidon_slice(&mut self, data: &[Fq]) -> Fq {
-        let mut perm = [Fq::zero(); WIDTH];
+    fn poseidon_slice(&mut self, data: &[BlsScalar]) -> BlsScalar {
+        let mut perm = [BlsScalar::zero(); WIDTH];
 
-        data.chunks(WIDTH - 2).fold(Fq::zero(), |r, chunk| {
-            perm[0] = Fq::from(chunk.len() as u64);
+        data.chunks(WIDTH - 2).fold(BlsScalar::zero(), |r, chunk| {
+            perm[0] = BlsScalar::from(chunk.len() as u64);
             perm[1] = r;
 
             chunk
@@ -63,18 +61,18 @@ impl Strategy<Fq> for ScalarStrategy {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Fq, ScalarStrategy, Strategy, WIDTH};
+    use crate::{BlsScalar, ScalarStrategy, Strategy, WIDTH};
 
-    fn perm(values: &mut [Fq]) {
+    fn perm(values: &mut [BlsScalar]) {
         let mut strategy = ScalarStrategy::new();
         strategy.perm(values);
     }
 
     #[test]
     fn hades_det() {
-        let mut x = [Fq::from(17u64); WIDTH];
-        let mut y = [Fq::from(17u64); WIDTH];
-        let mut z = [Fq::from(19u64); WIDTH];
+        let mut x = [BlsScalar::from(17u64); WIDTH];
+        let mut y = [BlsScalar::from(17u64); WIDTH];
+        let mut z = [BlsScalar::from(19u64); WIDTH];
 
         perm(&mut x);
         perm(&mut y);

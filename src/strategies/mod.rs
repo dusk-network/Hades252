@@ -1,17 +1,14 @@
 //! This module contains an implementation of the `Hades252`
 //! strategy algorithm specifically designed to work outside of
-//! Rank 1 Constraint Systems (R1CS).
+//! Rank 1 Constraint Systems (R1CS) or other custom Constraint
+//! Systems such as Add/Mul/Custom plonk gate-circuits.
 //!
 //! The inputs of the permutation function have to be explicitly
-//! over the Fq Field of the curve25519 so working over
-//! `Fp = 2^252 + 27742317777372353535851937790883648493`.
-
-use crate::{round_constants::ROUND_CONSTANTS, Fq, PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS, WIDTH};
-
-use num_traits::Zero;
-
-pub use gadget::GadgetStrategy;
-pub use scalar::ScalarStrategy;
+//! over the Scalar Field of the bls12_381 curve so working over
+//! `Fq = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001`.
+use crate::{
+    round_constants::ROUND_CONSTANTS, BlsScalar, PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS, WIDTH,
+};
 
 /// Strategy for zero-knowledge plonk circuits
 pub mod gadget;
@@ -19,24 +16,21 @@ pub mod gadget;
 /// Strategy for scalars
 pub mod scalar;
 
+pub use gadget::GadgetStrategy;
+pub use scalar::ScalarStrategy;
+
 /// Defines the Hades252 strategy algorithm.
-pub trait Strategy<T: Clone> {
+pub trait Strategy<T: Clone + Copy> {
     /// Computes `input ^ 5 (mod Fp)`
     ///
     /// The modulo depends on the input you use. In our case
-    /// the modulo is done in respect of the `curve25519 scalar field`
-    ///  == `2^252 + 27742317777372353535851937790883648493`.
+    /// the modulo is done in respect of the `bls12_381 scalar field`
+    ///  == `0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001`.
     fn quintic_s_box(&mut self, value: &mut T);
 
-    /// Multiply the values for MDS matrix.
+    /// Multiply the values for MDS matrix during the
+    /// full rounds application.
     fn mul_matrix(&mut self, values: &mut [T]);
-
-    /// Multiply the values for MDS matrix.
-    fn mul_matrix_partial_round(&mut self, constants: &[Fq], values: &mut [T]) {
-        let size = values.len() - 1;
-        self.add_round_key(&mut constants.iter(), &mut values[0..size]);
-        self.mul_matrix(values);
-    }
 
     /// Add round keys to a set of `StrategyInput`.
     ///
@@ -47,7 +41,15 @@ pub trait Strategy<T: Clone> {
     /// inputs and the outputs of the function.
     fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [T])
     where
-        I: Iterator<Item = &'b Fq>;
+        I: Iterator<Item = &'b BlsScalar>;
+
+    /// Multiply the values for MDS matrix during the
+    /// partial rounds application.
+    fn mul_matrix_partial_round(&mut self, constants: &[BlsScalar], values: &mut [T]) {
+        let size = values.len() - 1;
+        self.add_round_key(&mut constants.iter(), &mut values[0..size]);
+        self.mul_matrix(values);
+    }
 
     /// Applies a `Partial Round` also known as a
     /// `Partial S-Box layer` to a set of inputs.
@@ -63,9 +65,9 @@ pub trait Strategy<T: Clone> {
     /// This is known as the `Mix Layer`.
     fn apply_partial_round<'b, I>(&mut self, constants: &mut I, words: &mut [T])
     where
-        I: Iterator<Item = &'b Fq>,
+        I: Iterator<Item = &'b BlsScalar>,
     {
-        let mut cnst = [Fq::zero(); WIDTH];
+        let mut cnst = [BlsScalar::zero(); WIDTH];
         cnst.iter_mut().take(WIDTH - 1).for_each(|c| {
             *c = constants
                 .next()
@@ -99,16 +101,15 @@ pub trait Strategy<T: Clone> {
     /// This is known as the `Mix Layer`.
     fn apply_full_round<'a, I>(&mut self, constants: &mut I, words: &mut [T])
     where
-        I: Iterator<Item = &'a Fq>,
+        I: Iterator<Item = &'a BlsScalar>,
     {
         // Add round keys to each word
         self.add_round_key(constants, words);
 
         // Then apply quintic s-box
         words.iter_mut().for_each(|w| self.quintic_s_box(w));
-
-        //// Multiply this result by the MDS matrix
-        self.mul_matrix(words)
+        // Multiply this result by the MDS matrix
+        self.mul_matrix(words);
     }
 
     /// Applies a `permutation-round` of the `Hades252` strategy.
@@ -124,7 +125,7 @@ pub trait Strategy<T: Clone> {
     ///
     /// - Applies twice the half of the `FULL_ROUNDS`
     /// (which can be understood as linear ops).
-    ///  
+    ///
     /// - In the middle step it applies the `PARTIAL_ROUDS`
     /// (which can be understood as non-linear ops).
     ///
@@ -152,7 +153,7 @@ pub trait Strategy<T: Clone> {
     /// Perform a poseidon hash
     fn poseidon(&mut self, data: &mut [T]) -> T {
         self.perm(data);
-        data[1].clone()
+        data[1]
     }
 
     /// Perform a slice strategy

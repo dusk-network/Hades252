@@ -10,31 +10,28 @@ build="build/build.rs"
 
 [features]
 trace = ["tracing"]
+nightly_docs = []
 
 [dependencies]
 lazy_static = "1.3.0"
-algebra = { git = "https://github.com/scipr-lab/zexe/", features = [ "parallel" ]}
-num-traits = "0.2"
+dusk-bls12_381 = "0.1.0"
 
 [dependencies.tracing]
 version = "0.1"
 optional = true
 
-[dependencies.plonk]
-git = "https://github.com/dusk-network/plonk"
-branch = "fast_prover_zexe"
+[dependencies.dusk-plonk]
+version = "0.1.0"
 
 [dev-dependencies]
 rand = "0.7"
 criterion = "0.3"
-ff-fft = { git = "https://github.com/scipr-lab/zexe/" }
 merlin = "2"
-poly-commit = { git = "https://github.com/scipr-lab/poly-commit", branch = "master" }
 
 [build-dependencies]
-algebra = { git = "https://github.com/scipr-lab/zexe/", features = [ "parallel" ]}
 num-traits = "0.2"
 sha2 = "0.8"
+dusk-bls12_381 = "0.1.0"
 
 [profile.release]
 debug = false
@@ -43,17 +40,3 @@ lto = true
 incremental = false
 codegen-units = 1
 target-cpu = "native"
-
-# This is a temporary fix until we stop to use zexe; it's needed to replace
-# in the dependency graph the library below with the revision specified.
-# Unfortunately `patch` works matching just the URL - doesn't take in account
-# revision or branches, see:  https://github.com/rust-lang/cargo/issues/5478
-#
-# A quick workaround is changing the URL with double slashes
-[patch.'https://github.com/scipr-lab/zexe/']
-algebra = { git = 'https://github.com/scipr-lab//zexe', rev="2c22b77" }
-ff-fft = { git = "https://github.com/scipr-lab//zexe", rev="2c22b77" }
-bench-utils = { git = "https://github.com/scipr-lab//zexe", rev="2c22b77" }
-
-[patch.'https://github.com/scipr-lab/poly-commit']
-poly-commit = { git = "https://github.com/scipr-lab//poly-commit", rev="77676213"}

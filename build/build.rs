@@ -1,7 +1,7 @@
 mod ark;
 mod mds;
 
-pub use algebra::fields::jubjub::fq::Fq;
+pub use dusk_bls12_381::Scalar as BlsScalar;
 
 fn main() -> std::io::Result<()> {
     ark::write_to("assets/ark.bin")?;
