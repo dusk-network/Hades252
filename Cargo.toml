@@ -34,7 +34,6 @@ sha2 = "0.8"
 dusk-bls12_381 = "0.1.0"
 
 [profile.release]
-debug = false
 panic = 'abort'
 lto = true
 incremental = false
