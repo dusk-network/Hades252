@@ -23,7 +23,7 @@ make doc-internal
 To import `Hades252`, add the following to the dependencies section of your project's `Cargo.toml`:
 
 ```toml
-Hades252 = "0.5"
+Hades252 = "0.6.0"
 ```
 
 By default `Hades252` has a `width` equals to `5`.
