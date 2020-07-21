@@ -9,11 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
+- `dusk-plonk` crate version to `v0.2.0`
+- Tests for gadgets now use the Prover&Verifier abstraction.
 
 ### Fixed
 
 ### Removed
-
+- `dusk-bls12_381` deps which are now taken from plonk's re-exported ones.
 
 ## [0.5.0] - 11-05-20
 
