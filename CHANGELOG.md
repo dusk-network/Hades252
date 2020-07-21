@@ -6,13 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-### Added
-
 ### Changed
 - `dusk-plonk` crate version to `v0.2.0`
 - Tests for gadgets now use the Prover&Verifier abstraction.
-
-### Fixed
 
 ### Removed
 - `dusk-bls12_381` deps which are now taken from plonk's re-exported ones.
@@ -26,8 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `GadgetStrategy` structure refactor & optimization.
 - tests updated & refactored with the new proving system.
-
-### Fixed
 
 ### Removed
 - `Bulletproofs` is no longer the proving system used.
@@ -52,26 +46,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.0] - 21-03-20
 
-### Added
-
 ### Changed
 - Bulletproofs dependencies change to use dusk-network/bulletproofs "branch=develop".
 
-### Fixed
-
-### Removed
 
 
 ## [0.2.0] - 15-03-20
 
-### Added
-
 ### Changed
 - Bulletproofs dependencies change to use dusk-network/bulletproofs "branch=dalek_v2".
-
-### Fixed
-
-### Removed
 
 ## [0.1.0] - 27-02-20
 
@@ -81,9 +64,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Strategy structure.
 - Use `curve25519-dalek` as curve-backend.
 - Use `bulletproofs` as proving system.
-
-### Changed
-
-### Fixed
-
-### Removed
