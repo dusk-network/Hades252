@@ -1,5 +1,6 @@
 use super::Strategy;
-use crate::{mds_matrix::MDS_MATRIX, BlsScalar, WIDTH};
+use crate::{mds_matrix::MDS_MATRIX, WIDTH};
+use dusk_plonk::bls12_381::Scalar as BlsScalar;
 
 /// Implements a Hades252 strategy for `BlsScalar` as input values.
 #[derive(Default)]
@@ -61,7 +62,8 @@ impl Strategy<BlsScalar> for ScalarStrategy {
 
 #[cfg(test)]
 mod tests {
-    use crate::{BlsScalar, ScalarStrategy, Strategy, WIDTH};
+    use super::*;
+    use crate::{ScalarStrategy, Strategy, WIDTH};
 
     fn perm(values: &mut [BlsScalar]) {
         let mut strategy = ScalarStrategy::new();

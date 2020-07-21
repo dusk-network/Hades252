@@ -5,7 +5,7 @@
 //! https://extgit.iaik.tugraz.at/krypto/hadesmimc/blob/master/code/calc_round_numbers.py
 //! and then mapped onto `BlsScalar` in the Bls12_381 scalar field.
 #![allow(non_snake_case)]
-use crate::BlsScalar;
+use dusk_plonk::prelude::*;
 
 use lazy_static::lazy_static;
 
@@ -50,7 +50,7 @@ lazy_static! {
 #[cfg(test)]
 mod test {
     use super::ROUND_CONSTANTS;
-    use crate::BlsScalar;
+    use dusk_plonk::prelude::*;
 
     #[test]
     fn test_round_constants() {
