@@ -386,13 +386,13 @@ mod tests {
         // Proving
         let mut prover = Prover::new(b"hades_gadget_tester");
         let pi = hades_gadget_tester(i, o, prover.mut_cs());
-        prover.preprocess(&ck).unwrap();
-        let proof = prover.prove(&ck).unwrap();
+        prover.preprocess(&ck).expect("Preprocessing error");
+        let proof = prover.prove(&ck).expect("Error in proving process");
 
         // Verifying
         let mut verifier = Verifier::new(b"hades_gadget_tester");
         let _ = hades_gadget_tester(i, o, verifier.mut_cs());
-        verifier.preprocess(&ck).unwrap();
+        verifier.preprocess(&ck).expect("Preprocessing error");
         assert!(verifier.verify(&proof, &vk, &pi).is_ok());
         //------------------------------------------//
         //                                          //
@@ -408,7 +408,7 @@ mod tests {
 
         // Prove 2 with different values
         let pi2 = hades_gadget_tester(e, e_perm, prover.mut_cs());
-        let proof2 = prover.prove(&ck).unwrap();
+        let proof2 = prover.prove(&ck).expect("Error in proving process");
 
         // Verify 2 with different values
         // Verifying
@@ -433,7 +433,7 @@ mod tests {
         // Prove 3 with wrong inputs
         prover.clear_witness();
         let pi3 = hades_gadget_tester(x, h, prover.mut_cs());
-        let proof3 = prover.prove(&ck).unwrap();
+        let proof3 = prover.prove(&ck).expect("Error in proving process");
 
         // Verify 3 with wrong inputs should fail
         let _ = hades_gadget_tester(i, o, verifier.mut_cs());
