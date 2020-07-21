@@ -1,7 +1,6 @@
 use super::Strategy;
-use crate::{mds_matrix::MDS_MATRIX, BlsScalar, WIDTH};
-use dusk_plonk::constraint_system::composer::StandardComposer;
-use dusk_plonk::constraint_system::variable::Variable;
+use crate::{mds_matrix::MDS_MATRIX, WIDTH};
+use dusk_plonk::prelude::*;
 
 #[cfg(feature = "trace")]
 use tracing::trace;
@@ -99,8 +98,13 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();
 
-        let mut product = [self.cs.zero_var; WIDTH];
-        let mut z3 = self.cs.zero_var;
+        // Declare and constraint zero.
+        let zero = self.cs.add_input(BlsScalar::zero());
+        self.cs
+            .constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
+
+        let mut product = [zero; WIDTH];
+        let mut z3 = zero;
 
         for j in 0..WIDTH {
             for k in 0..WIDTH / 4 {
@@ -167,8 +171,13 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();
 
-        let mut product = [self.cs.zero_var; WIDTH];
-        let mut z3 = self.cs.zero_var;
+        // Declare and constraint zero.
+        let zero = self.cs.add_input(BlsScalar::zero());
+        self.cs
+            .constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
+
+        let mut product = [zero; WIDTH];
+        let mut z3 = zero;
 
         for j in 0..WIDTH {
             for k in 0..WIDTH / 4 {
@@ -240,6 +249,11 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();
 
+        // Declare and constraint zero.
+        let zero = self.cs.add_input(BlsScalar::zero());
+        self.cs
+            .constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
+
         words.iter_mut().for_each(|w| {
             let p = constants
                 .next()
@@ -248,7 +262,7 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
 
             *w = self.cs.add(
                 (BlsScalar::one(), *w),
-                (BlsScalar::zero(), self.cs.zero_var),
+                (BlsScalar::zero(), zero),
                 p,
                 BlsScalar::zero(),
             );
@@ -266,15 +280,20 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
 
     /// Perform a slice strategy
     fn poseidon_slice(&mut self, data: &[Variable]) -> Variable {
-        let mut perm = [self.cs.zero_var; WIDTH];
+        // Declare and constraint zero.
+        let zero = self.cs.add_input(BlsScalar::zero());
+        self.cs
+            .constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
 
-        let mut elements = [self.cs.zero_var; WIDTH - 2];
+        let mut perm = [zero; WIDTH];
+
+        let mut elements = [zero; WIDTH - 2];
         elements
             .iter_mut()
             .enumerate()
             .for_each(|(i, e)| *e = self.cs.add_input(BlsScalar::from((i + 1) as u64)));
 
-        data.chunks(WIDTH - 2).fold(self.cs.zero_var, |r, chunk| {
+        data.chunks(WIDTH - 2).fold(zero, |r, chunk| {
             perm[0] = elements[chunk.len() - 1];
             perm[1] = r;
 
@@ -291,23 +310,14 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{BlsScalar, GadgetStrategy, ScalarStrategy, Strategy, WIDTH};
+    use crate::{GadgetStrategy, ScalarStrategy, Strategy, WIDTH};
 
+    use dusk_plonk::prelude::*;
     use std::mem;
-
-    use dusk_plonk::commitment_scheme::kzg10::PublicParameters;
-    use dusk_plonk::constraint_system::variable::Variable;
-    use dusk_plonk::constraint_system::StandardComposer;
-    use dusk_plonk::fft::EvaluationDomain;
-    use merlin::Transcript;
 
     fn perm(values: &mut [BlsScalar]) {
         let mut strategy = ScalarStrategy::new();
         strategy.perm(values);
-    }
-
-    fn gen_transcript() -> Transcript {
-        Transcript::new(b"hades-plonk")
     }
 
     #[test]
@@ -325,12 +335,12 @@ mod tests {
             (input, output)
         }
 
-        fn new_composer(
+        fn hades_gadget_tester(
             i: [BlsScalar; WIDTH],
             o: [BlsScalar; WIDTH],
-        ) -> (StandardComposer, Vec<BlsScalar>) {
+            composer: &mut StandardComposer,
+        ) -> Vec<BlsScalar> {
             let mut perm: [Variable; WIDTH] = [unsafe { mem::zeroed() }; WIDTH];
-            let mut composer = StandardComposer::new();
 
             let zero = composer.add_input(BlsScalar::zero());
 
@@ -345,7 +355,7 @@ mod tests {
             });
 
             // Apply Hades gadget strategy.
-            GadgetStrategy::hades_gadget(&mut composer, &mut i_var);
+            GadgetStrategy::hades_gadget(composer, &mut i_var);
 
             // Copy the result of the permutation into the perm.
             perm.copy_from_slice(&i_var);
@@ -365,27 +375,25 @@ mod tests {
             });
 
             composer.add_dummy_constraints();
-            //let pub_inp = composer.public_inputs().clone();
-            (composer, vec![BlsScalar::zero()])
+            vec![BlsScalar::zero()]
         }
 
         // Setup OG params.
         let public_parameters = PublicParameters::setup(CAPACITY, &mut rand::thread_rng()).unwrap();
         let (ck, vk) = public_parameters.trim(CAPACITY).unwrap();
-        let domain = EvaluationDomain::new(CAPACITY).unwrap();
 
         let (i, o) = hades();
-        let (mut composer, pi) = new_composer(i, o);
-        let mut transcript = gen_transcript();
-        // Preprocess circuit
-        let circuit = composer.preprocess(&ck, &mut transcript, &domain);
+        // Proving
+        let mut prover = Prover::new(b"hades_gadget_tester");
+        let pi = hades_gadget_tester(i, o, prover.mut_cs());
+        prover.preprocess(&ck).expect("Preprocessing error");
+        let proof = prover.prove(&ck).expect("Error in proving process");
 
-        // Prove
-        let proof = composer.prove(&ck, &circuit, &mut transcript.clone());
-
-        // Verify
-        assert!(proof.verify(&circuit, &mut transcript.clone(), &vk, pi.as_slice()));
-
+        // Verifying
+        let mut verifier = Verifier::new(b"hades_gadget_tester");
+        let _ = hades_gadget_tester(i, o, verifier.mut_cs());
+        verifier.preprocess(&ck).expect("Preprocessing error");
+        assert!(verifier.verify(&proof, &vk, &pi).is_ok());
         //------------------------------------------//
         //                                          //
         //  Second Proof test with different values //
@@ -393,16 +401,19 @@ mod tests {
         //------------------------------------------//
 
         // Prepare input & output of the permutation for second Proof test
+        prover.clear_witness();
         let e = [BlsScalar::from(5000u64); WIDTH];
         let mut e_perm = [BlsScalar::from(5000u64); WIDTH];
         perm(&mut e_perm);
 
         // Prove 2 with different values
-        let (mut composer_2, pi2) = new_composer(e, e_perm);
-        let proof2 = composer_2.prove(&ck, &circuit, &mut transcript.clone());
+        let pi2 = hades_gadget_tester(e, e_perm, prover.mut_cs());
+        let proof2 = prover.prove(&ck).expect("Error in proving process");
 
         // Verify 2 with different values
-        assert!(proof2.verify(&circuit, &mut transcript.clone(), &vk, pi2.as_slice()));
+        // Verifying
+        let _ = hades_gadget_tester(i, o, verifier.mut_cs());
+        assert!(verifier.verify(&proof2, &vk, &pi2).is_ok());
 
         //------------------------------------------//
         //                                          //
@@ -420,62 +431,12 @@ mod tests {
         perm(&mut h);
 
         // Prove 3 with wrong inputs
-        let (mut composer_3, pi3) = new_composer(x, h);
-        let proof3 = composer_3.prove(&ck, &circuit, &mut transcript.clone());
+        prover.clear_witness();
+        let pi3 = hades_gadget_tester(x, h, prover.mut_cs());
+        let proof3 = prover.prove(&ck).expect("Error in proving process");
 
         // Verify 3 with wrong inputs should fail
-        assert!(!proof3.verify(&circuit, &mut transcript.clone(), &vk, pi3.as_slice()));
-    }
-
-    #[test]
-    fn poseidon_slice() {
-        let public_parameters =
-            PublicParameters::setup(4096 * 32, &mut rand::thread_rng()).unwrap();
-        let (ck, vk) = PublicParameters::trim(&public_parameters, 4096 * 32).unwrap();
-        let domain: EvaluationDomain = EvaluationDomain::new(4096 * 32).unwrap();
-
-        // Generate circuit
-        let mut base_transcript = gen_transcript();
-        let mut composer: StandardComposer = StandardComposer::new();
-
-        const BITS: usize = WIDTH * 20 - 19;
-
-        let data: Vec<BlsScalar> = (0..BITS)
-            .map(|_| BlsScalar::random(&mut rand::thread_rng()))
-            .collect();
-        let result = ScalarStrategy::new().poseidon_slice(data.as_slice());
-        let result = composer.add_input(result);
-
-        let mut vars: Vec<Variable> = data.iter().map(|d| composer.add_input(*d)).collect();
-
-        let x = GadgetStrategy::poseidon_slice_gadget(&mut composer, &mut vars);
-
-        composer.add_gate(
-            result,
-            x,
-            composer.zero_var,
-            -BlsScalar::one(),
-            BlsScalar::one(),
-            BlsScalar::one(),
-            BlsScalar::zero(),
-            BlsScalar::zero(),
-        );
-
-        composer.add_dummy_constraints();
-
-        let preprocessed_circuit = composer.preprocess(&ck, &mut base_transcript, &domain);
-
-        // Prove
-        let circuit = composer.preprocess(&ck, &mut base_transcript, &domain);
-        let proof = composer.prove(&ck, &circuit, &mut base_transcript.clone());
-
-        // Verify
-        let mut transcript = base_transcript.clone();
-        assert!(proof.verify(
-            &preprocessed_circuit,
-            &mut transcript,
-            &vk,
-            &vec![BlsScalar::zero()]
-        ));
+        let _ = hades_gadget_tester(i, o, verifier.mut_cs());
+        assert!(verifier.verify(&proof3, &vk, &pi3).is_err());
     }
 }

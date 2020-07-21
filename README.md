@@ -5,7 +5,7 @@
 
 # Hades252
 
-Implementation of Hades252 over the Bls12-381 Scalar field.
+Implementation of Hades252 permutation algorithm over the Bls12-381 Scalar field.
 
 *Unstable* : No guarantees can be made regarding the API stability.
 
@@ -23,12 +23,14 @@ make doc-internal
 To import `Hades252`, add the following to the dependencies section of your project's `Cargo.toml`:
 
 ```toml
-Hades252 = "0.2"
+Hades252 = "0.5"
 ```
 
 By default `Hades252` has a `width` equals to `5`.
 It's possible to use an arbitrary value, between `3` and `9`, by setting the
 environment variable `HADES252_WIDTH` to the desired number.
+
+
 
 ## Parameters
 
@@ -47,7 +49,8 @@ where each full round has `WIDTH` quintic S-Boxes.
 
 ## Example with permutation of scalars using the `ScalarStrategy`.
 ```rust
-use hades252::{BlsScalar, ScalarStrategy, Strategy, WIDTH};
+use hades252::{ScalarStrategy, Strategy, WIDTH};
+use dusk_plonk::bls12_381::BlsScalar;
 
 // Generate the inputs that will permute.
 // The number of values we can input is equivalent to `WIDTH`
@@ -66,8 +69,8 @@ assert_eq!(input.len(), output.len());
 ## Example with permutation of Variables using the `GadgetStrategy`
 ```rust
 //! Proving that we know the pre-image of a hades-252 hash.
-use hades252::{BlsScalar, GadgetStrategy, Strategy, WIDTH};
-use dusk_plonk::constraint_system::composer::StandardComposer;
+use hades252::GadgetStrategy, Strategy, WIDTH};
+use dusk_plonk::prelude::*;
 
 // Setup OG params.
 let public_parameters = PublicParameters::setup(CAPACITY, &mut rand::thread_rng()).unwrap();
@@ -80,8 +83,10 @@ let mut composer = StandardComposer::new();
 // Gen inputs
 let mut inputs = [Scalar::one(); WIDTH];
 
+let prover = Prover::new(b"Hades_Testing");
+
 // Call the gadget
-GadgetStrategy::hades_gadget(&mut composer, &mut inputs);
+GadgetStrategy::hades_gadget(prover.mut_cs(), &mut inputs);
 
 // Now your composer has been filled with a hades permutation
 // inside.

@@ -22,6 +22,4 @@ pub const PARTIAL_ROUNDS: usize = 59;
 /// Maximum input width for the rounds
 pub const WIDTH: usize = 5;
 
-pub use dusk_bls12_381::Scalar as BlsScalar;
-
 pub use strategies::{GadgetStrategy, ScalarStrategy, Strategy};
