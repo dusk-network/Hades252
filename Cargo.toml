@@ -1,6 +1,6 @@
 [package]
 name = "hades252"
-version = "0.6.0"
+version = "0.6.1"
 authors = [
   "kev <kevtheappdev@gmail.com>", "zer0 <matteo@dusk.network>",
   "Victor Lopes <victor@dusk.network>", "kr0 <c.perezbaro@gmail.com>"
@@ -26,7 +26,7 @@ criterion = "0.3"
 
 [build-dependencies]
 sha2 = "0.8"
-dusk-plonk = "0.2.0"
+dusk-plonk = "0.2.1"
 
 [profile.release]
 panic = 'abort'

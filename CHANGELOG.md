@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.6.1] - 24-07-20
+### Changed
+- `dusk-plonk` crate version to `0.2.1`.
+
 ## [0.6.0] - 21-07-20
 ### Changed
 - `dusk-plonk` crate version to `v0.2.0`
