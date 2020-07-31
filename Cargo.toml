@@ -26,7 +26,7 @@ criterion = "0.3"
 
 [build-dependencies]
 sha2 = "0.8"
-dusk-plonk = "0.2.1"
+dusk-plonk = {git = "https://github.com/dusk-network/plonk", branch = "pub_inputs_feature", features = ["trace-print"]}
 
 [profile.release]
 panic = 'abort'
