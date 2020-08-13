@@ -266,6 +266,7 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
 mod tests {
     use crate::{GadgetStrategy, ScalarStrategy, Strategy, WIDTH};
 
+    use anyhow::Result;
     use dusk_plonk::prelude::*;
     use std::mem;
 
@@ -275,7 +276,7 @@ mod tests {
     }
 
     #[test]
-    fn hades_preimage() {
+    fn hades_preimage() -> Result<()> {
         const CAPACITY: usize = 2048;
 
         fn hades() -> ([BlsScalar; WIDTH], [BlsScalar; WIDTH]) {
@@ -333,20 +334,20 @@ mod tests {
         }
 
         // Setup OG params.
-        let public_parameters = PublicParameters::setup(CAPACITY, &mut rand::thread_rng()).unwrap();
-        let (ck, vk) = public_parameters.trim(CAPACITY).unwrap();
+        let public_parameters = PublicParameters::setup(CAPACITY, &mut rand::thread_rng())?;
+        let (ck, vk) = public_parameters.trim(CAPACITY)?;
 
         let (i, o) = hades();
         // Proving
         let mut prover = Prover::new(b"hades_gadget_tester");
         let pi = hades_gadget_tester(i, o, prover.mut_cs());
-        prover.preprocess(&ck).expect("Preprocessing error");
-        let proof = prover.prove(&ck).expect("Error in proving process");
+        prover.preprocess(&ck)?;
+        let proof = prover.prove(&ck)?;
 
         // Verifying
         let mut verifier = Verifier::new(b"hades_gadget_tester");
         let _ = hades_gadget_tester(i, o, verifier.mut_cs());
-        verifier.preprocess(&ck).expect("Preprocessing error");
+        verifier.preprocess(&ck)?;
         assert!(verifier.verify(&proof, &vk, &pi).is_ok());
         //------------------------------------------//
         //                                          //
@@ -362,7 +363,7 @@ mod tests {
 
         // Prove 2 with different values
         let pi2 = hades_gadget_tester(e, e_perm, prover.mut_cs());
-        let proof2 = prover.prove(&ck).expect("Error in proving process");
+        let proof2 = prover.prove(&ck)?;
 
         // Verify 2 with different values
         // Verifying
@@ -387,10 +388,12 @@ mod tests {
         // Prove 3 with wrong inputs
         prover.clear_witness();
         let pi3 = hades_gadget_tester(x, h, prover.mut_cs());
-        let proof3 = prover.prove(&ck).expect("Error in proving process");
+        let proof3 = prover.prove(&ck)?;
 
         // Verify 3 with wrong inputs should fail
         let _ = hades_gadget_tester(i, o, verifier.mut_cs());
         assert!(verifier.verify(&proof3, &vk, &pi3).is_err());
+
+        Ok(())
     }
 }
