@@ -41,23 +41,6 @@ impl Strategy<BlsScalar> for ScalarStrategy {
             *w += constants.next().unwrap_or(&BlsScalar::one());
         });
     }
-
-    /// Perform a slice strategy
-    fn poseidon_slice(&mut self, data: &[BlsScalar]) -> BlsScalar {
-        let mut perm = [BlsScalar::zero(); WIDTH];
-
-        data.chunks(WIDTH - 2).fold(BlsScalar::zero(), |r, chunk| {
-            perm[0] = BlsScalar::from(chunk.len() as u64);
-            perm[1] = r;
-
-            chunk
-                .iter()
-                .zip(perm.iter_mut().skip(2))
-                .for_each(|(c, p)| *p = *c);
-
-            self.poseidon(&mut perm)
-        })
-    }
 }
 
 #[cfg(test)]

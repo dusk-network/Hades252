@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Updated the `dusk-plonk` versions to `v0.2.7`.
+
+### Removed
+- Legacy methods to perform `poseidon-based ops` such as hashing
+which is not the purpose of this lib.
+
 
 ## [0.6.1] - 24-07-20
 ### Changed

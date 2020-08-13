@@ -148,13 +148,4 @@ pub trait Strategy<T: Clone + Copy> {
             self.apply_full_round(&mut constants_iter, data);
         }
     }
-
-    /// Perform a poseidon hash
-    fn poseidon(&mut self, data: &mut [T]) -> T {
-        self.perm(data);
-        data[1]
-    }
-
-    /// Perform a slice strategy
-    fn poseidon_slice(&mut self, data: &[T]) -> T;
 }

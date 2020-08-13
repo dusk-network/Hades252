@@ -39,23 +39,6 @@ impl<'a> GadgetStrategy<'a> {
             );
         }
     }
-
-    /// Perform the poseidon hash on a plonk circuit
-    pub fn poseidon_gadget(
-        composer: &'a mut StandardComposer,
-        inputs: &mut [Variable],
-    ) -> Variable {
-        GadgetStrategy::hades_gadget(composer, inputs);
-        inputs[1]
-    }
-
-    /// Perform the poseidon slice hash on a plonk circuit
-    pub fn poseidon_slice_gadget(composer: &'a mut StandardComposer, x: &[Variable]) -> Variable {
-        let mut strategy = GadgetStrategy::new(composer);
-
-        let res_var: Variable = strategy.poseidon_slice(x);
-        res_var
-    }
 }
 
 impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
@@ -276,35 +259,6 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
                 WIDTH
             );
         }
-    }
-
-    /// Perform a slice strategy
-    fn poseidon_slice(&mut self, data: &[Variable]) -> Variable {
-        // Declare and constraint zero.
-        let zero = self.cs.add_input(BlsScalar::zero());
-        self.cs
-            .constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
-
-        let mut perm = [zero; WIDTH];
-
-        let mut elements = [zero; WIDTH - 2];
-        elements
-            .iter_mut()
-            .enumerate()
-            .for_each(|(i, e)| *e = self.cs.add_input(BlsScalar::from((i + 1) as u64)));
-
-        data.chunks(WIDTH - 2).fold(zero, |r, chunk| {
-            perm[0] = elements[chunk.len() - 1];
-            perm[1] = r;
-
-            chunk
-                .iter()
-                .zip(perm.iter_mut().skip(2))
-                .for_each(|(c, p)| *p = *c);
-
-            let var_res: Variable = self.poseidon(&mut perm);
-            var_res
-        })
     }
 }
 
