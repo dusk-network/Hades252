@@ -22,7 +22,7 @@ optional = true
 [dev-dependencies]
 rand = "0.7"
 criterion = "0.3"
-anyhow = "1.0.32"
+anyhow = "1.0.0"
 
 [build-dependencies]
 sha2 = "0.8"
