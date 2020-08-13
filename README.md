@@ -73,9 +73,9 @@ use hades252::GadgetStrategy, Strategy, WIDTH};
 use dusk_plonk::prelude::*;
 
 // Setup OG params.
-let public_parameters = PublicParameters::setup(CAPACITY, &mut rand::thread_rng()).unwrap();
-let (ck, vk) = public_parameters.trim(CAPACITY).unwrap();
-let domain = EvaluationDomain::new(CAPACITY).unwrap();
+let public_parameters = PublicParameters::setup(CAPACITY, &mut rand::thread_rng())?;;
+let (ck, vk) = public_parameters.trim(CAPACITY)?;;
+let domain = EvaluationDomain::new(CAPACITY)?;;
 
 // Gen composer
 let mut composer = StandardComposer::new();

@@ -19,10 +19,10 @@ nightly_docs = []
 version = "0.1"
 optional = true
 
-
 [dev-dependencies]
 rand = "0.7"
 criterion = "0.3"
+anyhow = "1.0.0"
 
 [build-dependencies]
 sha2 = "0.8"

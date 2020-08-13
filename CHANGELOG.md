@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `anyhow` crate to support Error handling in the tests.
+
 ### Changed
 - Updated the `dusk-plonk` versions to `v0.2.7`.
 
