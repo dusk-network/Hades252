@@ -1,3 +1,5 @@
+// Copyright (c) DUSK NETWORK. All rights reserved.
+// Licensed under the MPL 2.0 license. See LICENSE file in the project root for details.”
 use super::BlsScalar;
 use sha2::{Digest, Sha512};
 use std::fs;

@@ -1,3 +1,5 @@
+// Copyright (c) DUSK NETWORK. All rights reserved.
+// Licensed under the MPL 2.0 license. See LICENSE file in the project root for details.”
 use super::Strategy;
 use crate::{mds_matrix::MDS_MATRIX, WIDTH};
 use dusk_plonk::bls12_381::Scalar as BlsScalar;
