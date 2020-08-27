@@ -1,3 +1,5 @@
+// Copyright (c) DUSK NETWORK. All rights reserved.
+// Licensed under the MPL 2.0 license. See LICENSE file in the project root for details.”
 //! This module contains an implementation of the `Hades252`
 //! strategy algorithm specifically designed to work outside of
 //! Rank 1 Constraint Systems (R1CS) or other custom Constraint

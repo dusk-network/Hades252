@@ -1,3 +1,5 @@
+// Copyright (c) DUSK NETWORK. All rights reserved.
+// Licensed under the MPL 2.0 license. See LICENSE file in the project root for details.”
 //! This module is designed to load from `ark.bin` the 960
 //! constants used as `round_constants` in a `lazy_static` module.
 //!
