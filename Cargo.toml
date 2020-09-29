@@ -1,6 +1,6 @@
 [package]
 name = "hades252"
-version = "0.7.0"
+version = "0.8.0"
 authors = [
   "kev <kevtheappdev@gmail.com>", "zer0 <matteo@dusk.network>",
   "Victor Lopes <victor@dusk.network>", "kr0 <c.perezbaro@gmail.com>"
@@ -10,7 +10,7 @@ build="build/build.rs"
 
 [dependencies]
 lazy_static = "1.3.0"
-dusk-plonk = "0.2.7"
+dusk-plonk = {version = "0.2.11", features = ["trace-print"]}
 
 [features]
 nightly_docs = []
@@ -26,7 +26,7 @@ anyhow = "1.0.0"
 
 [build-dependencies]
 sha2 = "0.8"
-dusk-plonk = "0.2.7"
+dusk-plonk = {version = "0.2.11", features = ["trace-print"]}
 
 [profile.release]
 panic = 'abort'
