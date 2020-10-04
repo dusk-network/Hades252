@@ -5,26 +5,28 @@
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
 use super::Strategy;
+use crate::round_constants::ROUND_CONSTANTS;
 use crate::{mds_matrix::MDS_MATRIX, WIDTH};
 use dusk_plonk::prelude::*;
+use std::slice::Iter;
 
 #[cfg(feature = "trace")]
 use tracing::trace;
-
-/// Size of the generated public inputs for the permutation gadget
-pub const PI_SIZE: usize = 1737;
 
 /// Implements a Hades252 strategy for `Variable` as input values.
 /// Requires a reference to a `ConstraintSystem`.
 pub struct GadgetStrategy<'a> {
     /// A reference to the constraint system used by the gadgets
     pub cs: &'a mut StandardComposer,
+    ark: Iter<'static, BlsScalar>,
 }
 
 impl<'a> GadgetStrategy<'a> {
     /// Constructs a new `GadgetStrategy` with the constraint system.
     pub fn new(cs: &'a mut StandardComposer) -> Self {
-        GadgetStrategy { cs }
+        let ark = ROUND_CONSTANTS.iter();
+
+        GadgetStrategy { cs, ark }
     }
 
     /// Perform the hades permutation on a plonk circuit
@@ -156,7 +158,10 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
     }
 
     /// Multiply the values for MDS matrix in the partial round application process.
-    fn mul_matrix_partial_round(&mut self, constants: &[BlsScalar], values: &mut [Variable]) {
+    fn mul_matrix_partial_round<'b, I>(&mut self, _constants: &mut I, values: &mut [Variable])
+    where
+        I: Iterator<Item = &'b BlsScalar>,
+    {
         #[cfg(feature = "trace")]
         let circuit_size = self.cs.circuit_size();
 
@@ -167,6 +172,15 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
 
         let mut product = [zero; WIDTH];
         let mut z3 = zero;
+
+        let mut constants = [BlsScalar::zero(); WIDTH];
+        constants.iter_mut().take(WIDTH - 1).for_each(|c| {
+            *c = self
+                .ark
+                .next()
+                .cloned()
+                .expect("Hades252 out of ARK constants");
+        });
 
         for j in 0..WIDTH {
             for k in 0..WIDTH / 4 {
@@ -231,7 +245,7 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         }
     }
 
-    fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [Variable])
+    fn add_round_key<'b, I>(&mut self, _constants: &mut I, words: &mut [Variable])
     where
         I: Iterator<Item = &'b BlsScalar>,
     {
@@ -244,7 +258,8 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
             .constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
 
         words.iter_mut().for_each(|w| {
-            let p = constants
+            let p = self
+                .ark
                 .next()
                 .cloned()
                 .expect("Hades252 out of ARK constants");

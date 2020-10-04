@@ -12,7 +12,7 @@
 //! The inputs of the permutation function have to be explicitly
 //! over the Scalar Field of the bls12_381 curve so working over
 //! `Fq = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001`.
-use crate::{round_constants::ROUND_CONSTANTS, PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS, WIDTH};
+use crate::{round_constants::ROUND_CONSTANTS, PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS};
 use dusk_plonk::prelude::*;
 
 /// Strategy for zero-knowledge plonk circuits
@@ -50,9 +50,12 @@ pub trait Strategy<T: Clone + Copy> {
 
     /// Multiply the values for MDS matrix during the
     /// partial rounds application.
-    fn mul_matrix_partial_round(&mut self, constants: &[BlsScalar], values: &mut [T]) {
+    fn mul_matrix_partial_round<'b, I>(&mut self, constants: &mut I, values: &mut [T])
+    where
+        I: Iterator<Item = &'b BlsScalar>,
+    {
         let size = values.len() - 1;
-        self.add_round_key(&mut constants.iter(), &mut values[0..size]);
+        self.add_round_key(constants, &mut values[0..size]);
         self.mul_matrix(values);
     }
 
@@ -72,14 +75,6 @@ pub trait Strategy<T: Clone + Copy> {
     where
         I: Iterator<Item = &'b BlsScalar>,
     {
-        let mut cnst = [BlsScalar::zero(); WIDTH];
-        cnst.iter_mut().take(WIDTH - 1).for_each(|c| {
-            *c = constants
-                .next()
-                .cloned()
-                .expect("Hades252 out of ARK constants")
-        });
-
         let last = words.len() - 1;
 
         // Add round keys to each word
@@ -89,7 +84,7 @@ pub trait Strategy<T: Clone + Copy> {
         self.quintic_s_box(&mut words[last]);
 
         // Multiply this result by the MDS matrix
-        self.mul_matrix_partial_round(&cnst, words);
+        self.mul_matrix_partial_round(constants, words);
     }
 
     /// Applies a `Full Round` also known as a
