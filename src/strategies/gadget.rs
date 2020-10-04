@@ -10,50 +10,36 @@ use crate::{mds_matrix::MDS_MATRIX, WIDTH};
 use dusk_plonk::prelude::*;
 use std::slice::Iter;
 
-#[cfg(feature = "trace")]
-use tracing::trace;
-
 /// Implements a Hades252 strategy for `Variable` as input values.
 /// Requires a reference to a `ConstraintSystem`.
 pub struct GadgetStrategy<'a> {
     /// A reference to the constraint system used by the gadgets
     pub cs: &'a mut StandardComposer,
+    zero: Variable,
     ark: Iter<'static, BlsScalar>,
 }
 
 impl<'a> GadgetStrategy<'a> {
     /// Constructs a new `GadgetStrategy` with the constraint system.
     pub fn new(cs: &'a mut StandardComposer) -> Self {
+        let zero = cs.add_input(BlsScalar::zero());
+        cs.constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
+
         let ark = ROUND_CONSTANTS.iter();
 
-        GadgetStrategy { cs, ark }
+        GadgetStrategy { cs, zero, ark }
     }
 
     /// Perform the hades permutation on a plonk circuit
     pub fn hades_gadget(composer: &'a mut StandardComposer, x: &mut [Variable]) {
-        #[cfg(feature = "trace")]
-        let circuit_size = composer.circuit_size();
-
         let mut strategy = GadgetStrategy::new(composer);
 
         strategy.perm(x);
-
-        #[cfg(feature = "trace")]
-        {
-            trace!(
-                "Hades permutation performed with {} constraints for {} bits",
-                strategy.cs.circuit_size() - circuit_size,
-                WIDTH
-            );
-        }
     }
 }
 
 impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
     fn quintic_s_box(&mut self, value: &mut Variable) {
-        #[cfg(feature = "trace")]
-        let circuit_size = self.cs.circuit_size();
-
         let v = value.clone();
 
         (0..2).for_each(|_| {
@@ -73,29 +59,12 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
             BlsScalar::zero(),
             BlsScalar::zero(),
         );
-
-        #[cfg(feature = "trace")]
-        {
-            trace!(
-                "Hades quintic S-Box performed with {} constraints for {} bits",
-                self.cs.circuit_size() - circuit_size,
-                WIDTH
-            );
-        }
     }
 
     /// Adds a constraint for each matrix coefficient multiplication
     fn mul_matrix(&mut self, values: &mut [Variable]) {
-        #[cfg(feature = "trace")]
-        let circuit_size = self.cs.circuit_size();
-
-        // Declare and constraint zero.
-        let zero = self.cs.add_input(BlsScalar::zero());
-        self.cs
-            .constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
-
-        let mut product = [zero; WIDTH];
-        let mut z3 = zero;
+        let mut product = [self.zero; WIDTH];
+        let mut z3 = self.zero;
 
         for j in 0..WIDTH {
             for k in 0..WIDTH / 4 {
@@ -146,15 +115,6 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         }
 
         values.copy_from_slice(&product);
-
-        #[cfg(feature = "trace")]
-        {
-            trace!(
-                "Hades MDS multiplication performed with {} constraints for {} bits",
-                self.cs.circuit_size() - circuit_size,
-                WIDTH
-            );
-        }
     }
 
     /// Multiply the values for MDS matrix in the partial round application process.
@@ -162,16 +122,8 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
     where
         I: Iterator<Item = &'b BlsScalar>,
     {
-        #[cfg(feature = "trace")]
-        let circuit_size = self.cs.circuit_size();
-
-        // Declare and constraint zero.
-        let zero = self.cs.add_input(BlsScalar::zero());
-        self.cs
-            .constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
-
-        let mut product = [zero; WIDTH];
-        let mut z3 = zero;
+        let mut product = [self.zero; WIDTH];
+        let mut z3 = self.zero;
 
         let mut constants = [BlsScalar::zero(); WIDTH];
         constants.iter_mut().take(WIDTH - 1).for_each(|c| {
@@ -234,29 +186,12 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         }
 
         values.copy_from_slice(&product);
-
-        #[cfg(feature = "trace")]
-        {
-            trace!(
-                "Hades MDS multiplication performed with {} constraints for {} bits",
-                self.cs.circuit_size() - circuit_size,
-                WIDTH
-            );
-        }
     }
 
     fn add_round_key<'b, I>(&mut self, _constants: &mut I, words: &mut [Variable])
     where
         I: Iterator<Item = &'b BlsScalar>,
     {
-        #[cfg(feature = "trace")]
-        let circuit_size = self.cs.circuit_size();
-
-        // Declare and constraint zero.
-        let zero = self.cs.add_input(BlsScalar::zero());
-        self.cs
-            .constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
-
         words.iter_mut().for_each(|w| {
             let p = self
                 .ark
@@ -266,20 +201,11 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
 
             *w = self.cs.add(
                 (BlsScalar::one(), *w),
-                (BlsScalar::zero(), zero),
+                (BlsScalar::zero(), self.zero),
                 p,
                 BlsScalar::zero(),
             );
         });
-
-        #[cfg(feature = "trace")]
-        {
-            trace!(
-                "Hades ARK performed with {} constraints for {} bits",
-                self.cs.circuit_size() - circuit_size,
-                WIDTH
-            );
-        }
     }
 }
 
