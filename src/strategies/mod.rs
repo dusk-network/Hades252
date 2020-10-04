@@ -65,7 +65,7 @@ pub trait Strategy<T: Clone + Copy> {
     /// ### A partial round has 3 steps on every iteration:
     ///
     /// - Add round keys to each word. Also known as `ARK`.
-    /// - Apply `quintic S-Box` **just to the first element of
+    /// - Apply `quintic S-Box` **just to the last element of
     /// the words generated from the first step.** This is also known
     /// as a `Sub Words` operation.
     /// - Multiplies the output words from the second step by
@@ -108,6 +108,7 @@ pub trait Strategy<T: Clone + Copy> {
 
         // Then apply quintic s-box
         words.iter_mut().for_each(|w| self.quintic_s_box(w));
+
         // Multiply this result by the MDS matrix
         self.mul_matrix(words);
     }

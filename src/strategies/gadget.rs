@@ -36,26 +36,51 @@ impl<'a> GadgetStrategy<'a> {
 
         strategy.perm(x);
     }
+
+    /// Return the next round constant
+    pub fn ark(&mut self) -> BlsScalar {
+        self.ark
+            .next()
+            .cloned()
+            .expect("Hades252 out of ARK constants")
+    }
 }
 
 impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
     fn quintic_s_box(&mut self, value: &mut Variable) {
-        let v = value.clone();
+        let c = self.ark();
 
-        (0..2).for_each(|_| {
-            *value = self.cs.mul(
-                BlsScalar::one(),
-                *value,
-                *value,
-                BlsScalar::zero(),
-                BlsScalar::zero(),
-            )
-        });
-
-        *value = self.cs.mul(
+        // q_m * w_l * w_r + q_4 * w_4 + q_c
+        // v^2 + 2cv + c^2
+        // (v + c)^2
+        let v_2 = self.cs.big_mul(
             BlsScalar::one(),
             *value,
-            v,
+            *value,
+            Some((c + c, *value)),
+            c.square(),
+            BlsScalar::zero(),
+        );
+
+        let v_4 = self.cs.mul(
+            BlsScalar::one(),
+            v_2,
+            v_2,
+            BlsScalar::zero(),
+            BlsScalar::zero(),
+        );
+
+        // TODO - Find a way to calculate (v+c)^3 on a single gate
+        let v_c = self.cs.add(
+            (BlsScalar::one(), *value),
+            (BlsScalar::zero(), self.zero),
+            c,
+            BlsScalar::zero(),
+        );
+        *value = self.cs.mul(
+            BlsScalar::one(),
+            v_c,
+            v_4,
             BlsScalar::zero(),
             BlsScalar::zero(),
         );
@@ -127,11 +152,7 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
 
         let mut constants = [BlsScalar::zero(); WIDTH];
         constants.iter_mut().take(WIDTH - 1).for_each(|c| {
-            *c = self
-                .ark
-                .next()
-                .cloned()
-                .expect("Hades252 out of ARK constants");
+            *c = self.ark();
         });
 
         for j in 0..WIDTH {
@@ -188,24 +209,12 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         values.copy_from_slice(&product);
     }
 
-    fn add_round_key<'b, I>(&mut self, _constants: &mut I, words: &mut [Variable])
+    fn add_round_key<'b, I>(&mut self, _constants: &mut I, _words: &mut [Variable])
     where
         I: Iterator<Item = &'b BlsScalar>,
     {
-        words.iter_mut().for_each(|w| {
-            let p = self
-                .ark
-                .next()
-                .cloned()
-                .expect("Hades252 out of ARK constants");
-
-            *w = self.cs.add(
-                (BlsScalar::one(), *w),
-                (BlsScalar::zero(), self.zero),
-                p,
-                BlsScalar::zero(),
-            );
-        });
+        // The circuit is optimized if the ARK step is performed on the same gate
+        // as the S-Box
     }
 }
 
