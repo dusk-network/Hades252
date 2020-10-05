@@ -7,11 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 04-10-20
+### Changed
+- Optimize `GadgetStrategy` to consume less gates.
 
 ## [0.8.0] - 29-09-20
 ### Changed
 - Bump `dusk-plonk` to `v0.2.11`.
-
 
 ## [0.7.0] - 13-08-20
 ### Added

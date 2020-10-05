@@ -5,95 +5,91 @@
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
 use super::Strategy;
+use crate::round_constants::ROUND_CONSTANTS;
 use crate::{mds_matrix::MDS_MATRIX, WIDTH};
 use dusk_plonk::prelude::*;
-
-#[cfg(feature = "trace")]
-use tracing::trace;
-
-/// Size of the generated public inputs for the permutation gadget
-pub const PI_SIZE: usize = 1737;
+use std::slice::Iter;
 
 /// Implements a Hades252 strategy for `Variable` as input values.
 /// Requires a reference to a `ConstraintSystem`.
 pub struct GadgetStrategy<'a> {
     /// A reference to the constraint system used by the gadgets
     pub cs: &'a mut StandardComposer,
+    zero: Variable,
+    ark: Iter<'static, BlsScalar>,
 }
 
 impl<'a> GadgetStrategy<'a> {
     /// Constructs a new `GadgetStrategy` with the constraint system.
     pub fn new(cs: &'a mut StandardComposer) -> Self {
-        GadgetStrategy { cs }
+        let zero = cs.add_input(BlsScalar::zero());
+        cs.constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
+
+        let ark = ROUND_CONSTANTS.iter();
+
+        GadgetStrategy { cs, zero, ark }
     }
 
     /// Perform the hades permutation on a plonk circuit
     pub fn hades_gadget(composer: &'a mut StandardComposer, x: &mut [Variable]) {
-        #[cfg(feature = "trace")]
-        let circuit_size = composer.circuit_size();
-
         let mut strategy = GadgetStrategy::new(composer);
 
         strategy.perm(x);
+    }
 
-        #[cfg(feature = "trace")]
-        {
-            trace!(
-                "Hades permutation performed with {} constraints for {} bits",
-                strategy.cs.circuit_size() - circuit_size,
-                WIDTH
-            );
-        }
+    /// Return the next round constant
+    pub fn ark(&mut self) -> BlsScalar {
+        self.ark
+            .next()
+            .cloned()
+            .expect("Hades252 out of ARK constants")
     }
 }
 
 impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
     fn quintic_s_box(&mut self, value: &mut Variable) {
-        #[cfg(feature = "trace")]
-        let circuit_size = self.cs.circuit_size();
+        let c = self.ark();
 
-        let v = value.clone();
-
-        (0..2).for_each(|_| {
-            *value = self.cs.mul(
-                BlsScalar::one(),
-                *value,
-                *value,
-                BlsScalar::zero(),
-                BlsScalar::zero(),
-            )
-        });
-
-        *value = self.cs.mul(
+        // q_m * w_l * w_r + q_4 * w_4 + q_c
+        // v^2 + 2cv + c^2
+        // (v + c)^2
+        let v_2 = self.cs.big_mul(
             BlsScalar::one(),
             *value,
-            v,
+            *value,
+            Some((c + c, *value)),
+            c.square(),
+            BlsScalar::zero(),
+        );
+
+        let v_4 = self.cs.mul(
+            BlsScalar::one(),
+            v_2,
+            v_2,
             BlsScalar::zero(),
             BlsScalar::zero(),
         );
 
-        #[cfg(feature = "trace")]
-        {
-            trace!(
-                "Hades quintic S-Box performed with {} constraints for {} bits",
-                self.cs.circuit_size() - circuit_size,
-                WIDTH
-            );
-        }
+        // TODO - Find a way to calculate (v+c)^3 on a single gate
+        let v_c = self.cs.add(
+            (BlsScalar::one(), *value),
+            (BlsScalar::zero(), self.zero),
+            c,
+            BlsScalar::zero(),
+        );
+        *value = self.cs.mul(
+            BlsScalar::one(),
+            v_c,
+            v_4,
+            BlsScalar::zero(),
+            BlsScalar::zero(),
+        );
     }
 
     /// Adds a constraint for each matrix coefficient multiplication
     fn mul_matrix(&mut self, values: &mut [Variable]) {
-        #[cfg(feature = "trace")]
-        let circuit_size = self.cs.circuit_size();
-
-        // Declare and constraint zero.
-        let zero = self.cs.add_input(BlsScalar::zero());
-        self.cs
-            .constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
-
-        let mut product = [zero; WIDTH];
-        let mut z3 = zero;
+        let mut product = [self.zero; WIDTH];
+        let mut z3 = self.zero;
 
         for j in 0..WIDTH {
             for k in 0..WIDTH / 4 {
@@ -144,29 +140,20 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         }
 
         values.copy_from_slice(&product);
-
-        #[cfg(feature = "trace")]
-        {
-            trace!(
-                "Hades MDS multiplication performed with {} constraints for {} bits",
-                self.cs.circuit_size() - circuit_size,
-                WIDTH
-            );
-        }
     }
 
     /// Multiply the values for MDS matrix in the partial round application process.
-    fn mul_matrix_partial_round(&mut self, constants: &[BlsScalar], values: &mut [Variable]) {
-        #[cfg(feature = "trace")]
-        let circuit_size = self.cs.circuit_size();
+    fn mul_matrix_partial_round<'b, I>(&mut self, _constants: &mut I, values: &mut [Variable])
+    where
+        I: Iterator<Item = &'b BlsScalar>,
+    {
+        let mut product = [self.zero; WIDTH];
+        let mut z3 = self.zero;
 
-        // Declare and constraint zero.
-        let zero = self.cs.add_input(BlsScalar::zero());
-        self.cs
-            .constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
-
-        let mut product = [zero; WIDTH];
-        let mut z3 = zero;
+        let mut constants = [BlsScalar::zero(); WIDTH];
+        constants.iter_mut().take(WIDTH - 1).for_each(|c| {
+            *c = self.ark();
+        });
 
         for j in 0..WIDTH {
             for k in 0..WIDTH / 4 {
@@ -220,51 +207,14 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         }
 
         values.copy_from_slice(&product);
-
-        #[cfg(feature = "trace")]
-        {
-            trace!(
-                "Hades MDS multiplication performed with {} constraints for {} bits",
-                self.cs.circuit_size() - circuit_size,
-                WIDTH
-            );
-        }
     }
 
-    fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [Variable])
+    fn add_round_key<'b, I>(&mut self, _constants: &mut I, _words: &mut [Variable])
     where
         I: Iterator<Item = &'b BlsScalar>,
     {
-        #[cfg(feature = "trace")]
-        let circuit_size = self.cs.circuit_size();
-
-        // Declare and constraint zero.
-        let zero = self.cs.add_input(BlsScalar::zero());
-        self.cs
-            .constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
-
-        words.iter_mut().for_each(|w| {
-            let p = constants
-                .next()
-                .cloned()
-                .expect("Hades252 out of ARK constants");
-
-            *w = self.cs.add(
-                (BlsScalar::one(), *w),
-                (BlsScalar::zero(), zero),
-                p,
-                BlsScalar::zero(),
-            );
-        });
-
-        #[cfg(feature = "trace")]
-        {
-            trace!(
-                "Hades ARK performed with {} constraints for {} bits",
-                self.cs.circuit_size() - circuit_size,
-                WIDTH
-            );
-        }
+        // The circuit is optimized if the ARK step is performed on the same gate
+        // as the S-Box
     }
 }
 
