@@ -20,13 +20,23 @@ impl ScalarStrategy {
 }
 
 impl Strategy<BlsScalar> for ScalarStrategy {
-    fn quintic_s_box(&mut self, value: &mut BlsScalar) {
-        // XXX: Check speed difference between this and pow fn
-        let s = *value;
-        *value = s * s * s * s * s;
+    fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [BlsScalar])
+    where
+        I: Iterator<Item = &'b BlsScalar>,
+    {
+        words.iter_mut().for_each(|w| {
+            *w += Self::next_c(constants);
+        });
     }
 
-    fn mul_matrix(&mut self, values: &mut [BlsScalar]) {
+    fn quintic_s_box(&mut self, value: &mut BlsScalar) {
+        *value = value.square().square() * *value;
+    }
+
+    fn mul_matrix<'b, I>(&mut self, _constants: &mut I, values: &mut [BlsScalar])
+    where
+        I: Iterator<Item = &'b BlsScalar>,
+    {
         let mut result = [BlsScalar::zero(); WIDTH];
 
         for j in 0..WIDTH {
@@ -36,16 +46,6 @@ impl Strategy<BlsScalar> for ScalarStrategy {
         }
 
         values.copy_from_slice(&result);
-    }
-
-    fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [BlsScalar])
-    where
-        I: Iterator<Item = &'b BlsScalar>,
-    {
-        words.iter_mut().for_each(|w| {
-            // XXX: Shouldn't it follow the impl of gadget returning err if we get out of constants?
-            *w += constants.next().unwrap_or(&BlsScalar::one());
-        });
     }
 }
 

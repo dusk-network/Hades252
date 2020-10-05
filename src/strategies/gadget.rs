@@ -5,10 +5,9 @@
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
 use super::Strategy;
-use crate::round_constants::ROUND_CONSTANTS;
-use crate::{mds_matrix::MDS_MATRIX, WIDTH};
+use crate::mds_matrix::MDS_MATRIX;
+use crate::{PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS, WIDTH};
 use dusk_plonk::prelude::*;
-use std::slice::Iter;
 
 /// Implements a Hades252 strategy for `Variable` as input values.
 /// Requires a reference to a `ConstraintSystem`.
@@ -16,7 +15,7 @@ pub struct GadgetStrategy<'a> {
     /// A reference to the constraint system used by the gadgets
     pub cs: &'a mut StandardComposer,
     zero: Variable,
-    ark: Iter<'static, BlsScalar>,
+    count: usize,
 }
 
 impl<'a> GadgetStrategy<'a> {
@@ -25,9 +24,7 @@ impl<'a> GadgetStrategy<'a> {
         let zero = cs.add_input(BlsScalar::zero());
         cs.constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
 
-        let ark = ROUND_CONSTANTS.iter();
-
-        GadgetStrategy { cs, zero, ark }
+        GadgetStrategy { cs, zero, count: 0 }
     }
 
     /// Perform the hades permutation on a plonk circuit
@@ -36,185 +33,116 @@ impl<'a> GadgetStrategy<'a> {
 
         strategy.perm(x);
     }
-
-    /// Return the next round constant
-    pub fn ark(&mut self) -> BlsScalar {
-        self.ark
-            .next()
-            .cloned()
-            .expect("Hades252 out of ARK constants")
-    }
 }
 
 impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
+    fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [Variable])
+    where
+        I: Iterator<Item = &'b BlsScalar>,
+    {
+        // Add only for the first round.
+        //
+        // The remainder ARC are performed with the constant appended
+        // to the linear layer
+        if self.count == 0 {
+            words.iter_mut().for_each(|w| {
+                *w = self.cs.add(
+                    (BlsScalar::one(), *w),
+                    (BlsScalar::zero(), self.zero),
+                    Self::next_c(constants),
+                    BlsScalar::zero(),
+                );
+            });
+        }
+    }
+
     fn quintic_s_box(&mut self, value: &mut Variable) {
-        let c = self.ark();
-
-        // q_m * w_l * w_r + q_4 * w_4 + q_c
-        // v^2 + 2cv + c^2
-        // (v + c)^2
-        let v_2 = self.cs.big_mul(
+        let v2 = self.cs.mul(
             BlsScalar::one(),
             *value,
             *value,
-            Some((c + c, *value)),
-            c.square(),
+            BlsScalar::zero(),
             BlsScalar::zero(),
         );
 
-        let v_4 = self.cs.mul(
+        let v4 = self.cs.mul(
             BlsScalar::one(),
-            v_2,
-            v_2,
+            v2,
+            v2,
             BlsScalar::zero(),
             BlsScalar::zero(),
         );
 
-        // TODO - Find a way to calculate (v+c)^3 on a single gate
-        let v_c = self.cs.add(
-            (BlsScalar::one(), *value),
-            (BlsScalar::zero(), self.zero),
-            c,
-            BlsScalar::zero(),
-        );
         *value = self.cs.mul(
             BlsScalar::one(),
-            v_c,
-            v_4,
+            v4,
+            *value,
             BlsScalar::zero(),
             BlsScalar::zero(),
         );
     }
 
     /// Adds a constraint for each matrix coefficient multiplication
-    fn mul_matrix(&mut self, values: &mut [Variable]) {
-        let mut product = [self.zero; WIDTH];
-        let mut z3 = self.zero;
-
-        for j in 0..WIDTH {
-            for k in 0..WIDTH / 4 {
-                let i = 4 * k;
-
-                let z1 = self.cs.add(
-                    (MDS_MATRIX[j][i], values[i]),
-                    (MDS_MATRIX[j][i + 1], values[i + 1]),
-                    BlsScalar::zero(),
-                    BlsScalar::zero(),
-                );
-
-                let z2 = self.cs.add(
-                    (MDS_MATRIX[j][i + 2], values[i + 2]),
-                    (MDS_MATRIX[j][i + 3], values[i + 3]),
-                    BlsScalar::zero(),
-                    BlsScalar::zero(),
-                );
-
-                z3 = self.cs.add(
-                    (BlsScalar::one(), z1),
-                    (BlsScalar::one(), z2),
-                    BlsScalar::zero(),
-                    BlsScalar::zero(),
-                );
-            }
-
-            // TODO - Replace by compiler constant evaluation
-            if WIDTH < 4 {
-                for k in 0..WIDTH {
-                    product[k] = self.cs.add(
-                        (BlsScalar::one(), product[k]),
-                        (MDS_MATRIX[k][j], values[j]),
-                        BlsScalar::zero(),
-                        BlsScalar::zero(),
-                    );
-                }
-            } else if WIDTH & 1 == 1 {
-                product[j] = self.cs.add(
-                    (BlsScalar::one(), z3),
-                    (MDS_MATRIX[j][WIDTH - 1], values[WIDTH - 1]),
-                    BlsScalar::zero(),
-                    BlsScalar::zero(),
-                );
-            } else {
-                product[j] = z3;
-            }
-        }
-
-        values.copy_from_slice(&product);
-    }
-
-    /// Multiply the values for MDS matrix in the partial round application process.
-    fn mul_matrix_partial_round<'b, I>(&mut self, _constants: &mut I, values: &mut [Variable])
+    fn mul_matrix<'b, I>(&mut self, constants: &mut I, values: &mut [Variable])
     where
         I: Iterator<Item = &'b BlsScalar>,
     {
-        let mut product = [self.zero; WIDTH];
-        let mut z3 = self.zero;
+        let mut result = [self.zero; WIDTH];
+        self.count += 1;
 
-        let mut constants = [BlsScalar::zero(); WIDTH];
-        constants.iter_mut().take(WIDTH - 1).for_each(|c| {
-            *c = self.ark();
-        });
+        let next_is_partial = self.count >= TOTAL_FULL_ROUNDS / 2
+            && self.count < TOTAL_FULL_ROUNDS / 2 + PARTIAL_ROUNDS;
 
+        // Implementation optimized for WIDTH = 5
+        //
+        // c is the next round constant.
+        // For the partial round, it is added only for the last element
+        //
+        // The resulting array `r` will be defined as
+        // r[x] = sum j 0..WIDTH ( MDS[x][j] * values[j] ) + c
+        //
+        // q_l = MDS[x][0]
+        // q_r = MDS[x][1]
+        // q_4 = MDS[x][2]
+        // w_l = values[0]
+        // w_r = values[1]
+        // w_4 = values[2]
+        // r[x] = q_l · w_l + q_r · w_r + q_4 · w_4;
+        //
+        // q_l = MDS[x][3]
+        // q_r = MDS[x][4]
+        // q_4 = 1
+        // w_l = values[3]
+        // w_r = values[4]
+        // w_4 = r[x]
+        // r[x] = q_l · w_l + q_r · w_r + q_4 · w_4 + c;
         for j in 0..WIDTH {
-            for k in 0..WIDTH / 4 {
-                let i = 4 * k;
+            let c;
 
-                let q_c = constants[i] * MDS_MATRIX[j][i] + constants[i + 1] * MDS_MATRIX[j][i + 1];
-                let z1 = self.cs.add(
-                    (MDS_MATRIX[j][i], values[i]),
-                    (MDS_MATRIX[j][i + 1], values[i + 1]),
-                    q_c,
-                    BlsScalar::zero(),
-                );
-
-                let q_c = constants[i + 2] * MDS_MATRIX[j][i + 2]
-                    + constants[i + 3] * MDS_MATRIX[j][i + 3];
-                let z2 = self.cs.add(
-                    (MDS_MATRIX[j][i + 2], values[i + 2]),
-                    (MDS_MATRIX[j][i + 3], values[i + 3]),
-                    q_c,
-                    BlsScalar::zero(),
-                );
-
-                z3 = self.cs.add(
-                    (BlsScalar::one(), z1),
-                    (BlsScalar::one(), z2),
-                    BlsScalar::zero(),
-                    BlsScalar::zero(),
-                );
-            }
-
-            // TODO - Replace by compiler constant evaluation
-            if WIDTH < 4 {
-                for k in 0..WIDTH {
-                    product[k] = self.cs.add(
-                        (BlsScalar::one(), product[k]),
-                        (MDS_MATRIX[k][j], values[j]),
-                        constants[j] * MDS_MATRIX[k][j],
-                        BlsScalar::zero(),
-                    );
-                }
-            } else if WIDTH & 1 == 1 {
-                product[j] = self.cs.add(
-                    (BlsScalar::one(), z3),
-                    (MDS_MATRIX[j][WIDTH - 1], values[WIDTH - 1]),
-                    constants[WIDTH - 1] * MDS_MATRIX[j][WIDTH - 1],
-                    BlsScalar::zero(),
-                );
+            if (!next_is_partial || j == WIDTH - 1) && self.count < Self::rounds() {
+                c = Self::next_c(constants);
             } else {
-                product[j] = z3;
+                c = BlsScalar::zero();
             }
+
+            result[j] = self.cs.big_add(
+                (MDS_MATRIX[j][0], values[0]),
+                (MDS_MATRIX[j][1], values[1]),
+                Some((MDS_MATRIX[j][2], values[2])),
+                BlsScalar::zero(),
+                BlsScalar::zero(),
+            );
+
+            result[j] = self.cs.big_add(
+                (MDS_MATRIX[j][3], values[3]),
+                (MDS_MATRIX[j][4], values[4]),
+                Some((BlsScalar::one(), result[j])),
+                c,
+                BlsScalar::zero(),
+            );
         }
 
-        values.copy_from_slice(&product);
-    }
-
-    fn add_round_key<'b, I>(&mut self, _constants: &mut I, _words: &mut [Variable])
-    where
-        I: Iterator<Item = &'b BlsScalar>,
-    {
-        // The circuit is optimized if the ARK step is performed on the same gate
-        // as the S-Box
+        values.copy_from_slice(&result);
     }
 }
 
