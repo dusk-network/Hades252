@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 05-10-20
+### Changed
+- Major optimization on `GadgetStrategy` with fan-in-3 feature of PLONK.
+    Gates per permutation set to `973`
+
 ## [0.8.1] - 04-10-20
 ### Changed
 - Optimize `GadgetStrategy` to consume less gates.

@@ -26,16 +26,16 @@ pub use scalar::ScalarStrategy;
 
 /// Defines the Hades252 strategy algorithm.
 pub trait Strategy<T: Clone + Copy> {
-    /// Computes `input ^ 5 (mod Fp)`
-    ///
-    /// The modulo depends on the input you use. In our case
-    /// the modulo is done in respect of the `bls12_381 scalar field`
-    ///  == `0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001`.
-    fn quintic_s_box(&mut self, value: &mut T);
-
-    /// Multiply the values for MDS matrix during the
-    /// full rounds application.
-    fn mul_matrix(&mut self, values: &mut [T]);
+    /// Fetch the next round constant from an iterator
+    fn next_c<'b, I>(constants: &mut I) -> BlsScalar
+    where
+        I: Iterator<Item = &'b BlsScalar>,
+    {
+        constants
+            .next()
+            .copied()
+            .expect("Hades252 out of ARK constants")
+    }
 
     /// Add round keys to a set of `StrategyInput`.
     ///
@@ -48,16 +48,18 @@ pub trait Strategy<T: Clone + Copy> {
     where
         I: Iterator<Item = &'b BlsScalar>;
 
+    /// Computes `input ^ 5 (mod Fp)`
+    ///
+    /// The modulo depends on the input you use. In our case
+    /// the modulo is done in respect of the `bls12_381 scalar field`
+    ///  == `0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001`.
+    fn quintic_s_box(&mut self, value: &mut T);
+
     /// Multiply the values for MDS matrix during the
-    /// partial rounds application.
-    fn mul_matrix_partial_round<'b, I>(&mut self, constants: &mut I, values: &mut [T])
+    /// full rounds application.
+    fn mul_matrix<'b, I>(&mut self, constants: &mut I, values: &mut [T])
     where
-        I: Iterator<Item = &'b BlsScalar>,
-    {
-        let size = values.len() - 1;
-        self.add_round_key(constants, &mut values[0..size]);
-        self.mul_matrix(values);
-    }
+        I: Iterator<Item = &'b BlsScalar>;
 
     /// Applies a `Partial Round` also known as a
     /// `Partial S-Box layer` to a set of inputs.
@@ -78,13 +80,13 @@ pub trait Strategy<T: Clone + Copy> {
         let last = words.len() - 1;
 
         // Add round keys to each word
-        self.add_round_key(constants, &mut words[last..last + 1]);
+        self.add_round_key(constants, &mut words[last..]);
 
         // Then apply quintic s-box
         self.quintic_s_box(&mut words[last]);
 
         // Multiply this result by the MDS matrix
-        self.mul_matrix_partial_round(constants, words);
+        self.mul_matrix(constants, words);
     }
 
     /// Applies a `Full Round` also known as a
@@ -110,7 +112,7 @@ pub trait Strategy<T: Clone + Copy> {
         words.iter_mut().for_each(|w| self.quintic_s_box(w));
 
         // Multiply this result by the MDS matrix
-        self.mul_matrix(words);
+        self.mul_matrix(constants, words);
     }
 
     /// Applies a `permutation-round` of the `Hades252` strategy.
@@ -133,21 +135,26 @@ pub trait Strategy<T: Clone + Copy> {
     /// This structure allows to minimize the number of non-linear
     /// ops while mantaining the security.
     fn perm(&mut self, data: &mut [T]) {
-        let mut constants_iter = ROUND_CONSTANTS.iter();
+        let mut constants = ROUND_CONSTANTS.iter();
 
         // Apply R_f full rounds
         for _ in 0..TOTAL_FULL_ROUNDS / 2 {
-            self.apply_full_round(&mut constants_iter, data);
+            self.apply_full_round(&mut constants, data);
         }
 
         // Apply R_P partial rounds
         for _ in 0..PARTIAL_ROUNDS {
-            self.apply_partial_round(&mut constants_iter, data);
+            self.apply_partial_round(&mut constants, data);
         }
 
         // Apply R_f full rounds
         for _ in 0..TOTAL_FULL_ROUNDS / 2 {
-            self.apply_full_round(&mut constants_iter, data);
+            self.apply_full_round(&mut constants, data);
         }
+    }
+
+    /// Return the total rounds count
+    fn rounds() -> usize {
+        TOTAL_FULL_ROUNDS + PARTIAL_ROUNDS
     }
 }
