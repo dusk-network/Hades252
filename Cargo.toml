@@ -1,6 +1,6 @@
 [package]
 name = "hades252"
-version = "0.9.0"
+version = "0.10.0"
 authors = [
   "kev <kevtheappdev@gmail.com>", "zer0 <matteo@dusk.network>",
   "Victor Lopes <victor@dusk.network>", "kr0 <c.perezbaro@gmail.com>"

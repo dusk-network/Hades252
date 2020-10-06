@@ -80,7 +80,7 @@ pub trait Strategy<T: Clone + Copy> {
         let last = words.len() - 1;
 
         // Add round keys to each word
-        self.add_round_key(constants, &mut words[last..]);
+        self.add_round_key(constants, words);
 
         // Then apply quintic s-box
         self.quintic_s_box(&mut words[last]);

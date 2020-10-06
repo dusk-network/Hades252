@@ -6,7 +6,7 @@
 
 use super::Strategy;
 use crate::mds_matrix::MDS_MATRIX;
-use crate::{PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS, WIDTH};
+use crate::WIDTH;
 use dusk_plonk::prelude::*;
 
 /// Implements a Hades252 strategy for `Variable` as input values.
@@ -90,9 +90,6 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         let mut result = [self.zero; WIDTH];
         self.count += 1;
 
-        let next_is_partial = self.count >= TOTAL_FULL_ROUNDS / 2
-            && self.count < TOTAL_FULL_ROUNDS / 2 + PARTIAL_ROUNDS;
-
         // Implementation optimized for WIDTH = 5
         //
         // c is the next round constant.
@@ -119,7 +116,7 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         for j in 0..WIDTH {
             let c;
 
-            if (!next_is_partial || j == WIDTH - 1) && self.count < Self::rounds() {
+            if self.count < Self::rounds() {
                 c = Self::next_c(constants);
             } else {
                 c = BlsScalar::zero();
