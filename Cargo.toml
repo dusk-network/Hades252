@@ -10,7 +10,7 @@ build="build/build.rs"
 
 [dependencies]
 lazy_static = "1.3.0"
-dusk-plonk = { git = "https://github.com/dusk-network/dusk-plonk", features = ["trace-print"]}
+dusk-plonk = { git = "https://github.com/dusk-network/dusk-plonk", branch = "derive_canon", features = ["trace-print"]}
 
 [features]
 nightly_docs = []
@@ -22,7 +22,7 @@ anyhow = "1.0.0"
 
 [build-dependencies]
 sha2 = "0.8"
-dusk-plonk = { git = "https://github.com/dusk-network/dusk-plonk", features = ["trace-print"]}
+dusk-plonk = { git = "https://github.com/dusk-network/dusk-plonk", branch = "derive_canon", features = ["trace-print"]}
 
 [profile.release]
 panic = 'abort'
