@@ -28,4 +28,6 @@ pub const PARTIAL_ROUNDS: usize = 59;
 /// Maximum input width for the rounds
 pub const WIDTH: usize = 5;
 
-pub use strategies::{GadgetStrategy, ScalarStrategy, Strategy};
+#[cfg(feature = "std")]
+pub use strategies::GadgetStrategy;
+pub use strategies::{ScalarStrategy, Strategy};
