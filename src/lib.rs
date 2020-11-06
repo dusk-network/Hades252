@@ -10,6 +10,7 @@
 #![deny(missing_docs)]
 #![cfg_attr(feature = "nightly_docs", feature(external_doc))]
 #![cfg_attr(feature = "nightly_docs", doc(include = "../README.md"))]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 mod mds_matrix;
 mod round_constants;
