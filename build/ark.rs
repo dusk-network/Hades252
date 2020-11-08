@@ -4,16 +4,16 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
-use super::BlsScalar;
+use super::Scalar;
 use sha2::{Digest, Sha512};
 use std::fs;
 use std::io::Write;
 
 const CONSTANTS: usize = 960;
 
-fn constants() -> [BlsScalar; CONSTANTS] {
-    let mut cnst = [BlsScalar::zero(); CONSTANTS];
-    let mut p = BlsScalar::one();
+fn constants() -> [Scalar; CONSTANTS] {
+    let mut cnst = [Scalar::zero(); CONSTANTS];
+    let mut p = Scalar::one();
     let mut bytes = b"poseidon-for-plonk".to_vec();
 
     cnst.iter_mut().for_each(|c| {
@@ -24,7 +24,7 @@ fn constants() -> [BlsScalar; CONSTANTS] {
         let mut v = [0x00u8; 64];
         v.copy_from_slice(&bytes[0..64]);
 
-        *c = BlsScalar::from_bytes_wide(&v) + p;
+        *c = Scalar::from_bytes_wide(&v) + p;
         p = *c;
     });
 
