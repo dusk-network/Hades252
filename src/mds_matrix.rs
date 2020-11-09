@@ -6,7 +6,7 @@
 
 #![allow(non_snake_case)]
 use crate::WIDTH;
-use dusk_plonk::prelude::*;
+use dusk_bls12_381::BlsScalar;
 use lazy_static::lazy_static;
 
 lazy_static! {

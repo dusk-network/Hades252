@@ -6,7 +6,7 @@
 
 use super::Strategy;
 use crate::{mds_matrix::MDS_MATRIX, WIDTH};
-use dusk_plonk::bls12_381::Scalar as BlsScalar;
+use dusk_bls12_381::BlsScalar;
 
 /// Implements a Hades252 strategy for `BlsScalar` as input values.
 #[derive(Default)]

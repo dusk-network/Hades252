@@ -7,6 +7,7 @@
 use super::Strategy;
 use crate::mds_matrix::MDS_MATRIX;
 use crate::WIDTH;
+use dusk_bls12_381::BlsScalar;
 use dusk_plonk::prelude::*;
 
 /// Implements a Hades252 strategy for `Variable` as input values.
@@ -196,7 +197,7 @@ mod tests {
             // Copy the result of the permutation into the perm.
             perm.copy_from_slice(&i_var);
 
-            // Check that the Gadget perm results = Scalar perm results
+            // Check that the Gadget perm results = BlsScalar perm results
             i_var.iter().zip(o_var.iter()).for_each(|(p, o)| {
                 composer.add_gate(
                     *p,

@@ -10,17 +10,20 @@
 //! Systems such as Add/Mul/Custom plonk gate-circuits.
 //!
 //! The inputs of the permutation function have to be explicitly
-//! over the Scalar Field of the bls12_381 curve so working over
+//! over the BlsScalar Field of the bls12_381 curve so working over
 //! `Fq = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001`.
+
 use crate::{round_constants::ROUND_CONSTANTS, PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS};
-use dusk_plonk::prelude::*;
+use dusk_bls12_381::BlsScalar;
 
 /// Strategy for zero-knowledge plonk circuits
+#[cfg(feature = "std")]
 pub mod gadget;
 
 /// Strategy for scalars
 pub mod scalar;
 
+#[cfg(feature = "std")]
 pub use gadget::GadgetStrategy;
 pub use scalar::ScalarStrategy;
 

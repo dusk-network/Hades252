@@ -11,8 +11,8 @@
 //! https://extgit.iaik.tugraz.at/krypto/hadesmimc/blob/master/code/calc_round_numbers.py
 //! and then mapped onto `BlsScalar` in the Bls12_381 scalar field.
 #![allow(non_snake_case)]
-use dusk_plonk::prelude::*;
 
+use dusk_bls12_381::BlsScalar;
 use lazy_static::lazy_static;
 
 const CONSTANTS: usize = 960;
@@ -56,7 +56,7 @@ lazy_static! {
 #[cfg(test)]
 mod test {
     use super::ROUND_CONSTANTS;
-    use dusk_plonk::prelude::*;
+    use dusk_bls12_381::BlsScalar;
 
     #[test]
     fn test_round_constants() {

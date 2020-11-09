@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] - 09-11-20
+### Changed
+- Update to support full no-std.
+
 ## [0.10.0] - 06-10-20
 ### Fixed
 - Fixes #69 - ARK on partial round must be applied to all elements.
