@@ -10,11 +10,11 @@
 //! Systems such as Add/Mul/Custom plonk gate-circuits.
 //!
 //! The inputs of the permutation function have to be explicitly
-//! over the Scalar Field of the bls12_381 curve so working over
+//! over the BlsScalar Field of the bls12_381 curve so working over
 //! `Fq = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001`.
 
 use crate::{round_constants::ROUND_CONSTANTS, PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS};
-use dusk_bls12_381::Scalar;
+use dusk_bls12_381::BlsScalar;
 
 /// Strategy for zero-knowledge plonk circuits
 #[cfg(feature = "std")]
@@ -30,9 +30,9 @@ pub use scalar::ScalarStrategy;
 /// Defines the Hades252 strategy algorithm.
 pub trait Strategy<T: Clone + Copy> {
     /// Fetch the next round constant from an iterator
-    fn next_c<'b, I>(constants: &mut I) -> Scalar
+    fn next_c<'b, I>(constants: &mut I) -> BlsScalar
     where
-        I: Iterator<Item = &'b Scalar>,
+        I: Iterator<Item = &'b BlsScalar>,
     {
         constants
             .next()
@@ -49,7 +49,7 @@ pub trait Strategy<T: Clone + Copy> {
     /// inputs and the outputs of the function.
     fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [T])
     where
-        I: Iterator<Item = &'b Scalar>;
+        I: Iterator<Item = &'b BlsScalar>;
 
     /// Computes `input ^ 5 (mod Fp)`
     ///
@@ -62,7 +62,7 @@ pub trait Strategy<T: Clone + Copy> {
     /// full rounds application.
     fn mul_matrix<'b, I>(&mut self, constants: &mut I, values: &mut [T])
     where
-        I: Iterator<Item = &'b Scalar>;
+        I: Iterator<Item = &'b BlsScalar>;
 
     /// Applies a `Partial Round` also known as a
     /// `Partial S-Box layer` to a set of inputs.
@@ -78,7 +78,7 @@ pub trait Strategy<T: Clone + Copy> {
     /// This is known as the `Mix Layer`.
     fn apply_partial_round<'b, I>(&mut self, constants: &mut I, words: &mut [T])
     where
-        I: Iterator<Item = &'b Scalar>,
+        I: Iterator<Item = &'b BlsScalar>,
     {
         let last = words.len() - 1;
 
@@ -106,7 +106,7 @@ pub trait Strategy<T: Clone + Copy> {
     /// This is known as the `Mix Layer`.
     fn apply_full_round<'a, I>(&mut self, constants: &mut I, words: &mut [T])
     where
-        I: Iterator<Item = &'a Scalar>,
+        I: Iterator<Item = &'a BlsScalar>,
     {
         // Add round keys to each word
         self.add_round_key(constants, words);

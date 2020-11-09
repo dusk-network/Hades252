@@ -7,7 +7,7 @@
 use super::Strategy;
 use crate::mds_matrix::MDS_MATRIX;
 use crate::WIDTH;
-use dusk_bls12_381::Scalar;
+use dusk_bls12_381::BlsScalar;
 use dusk_plonk::prelude::*;
 
 /// Implements a Hades252 strategy for `Variable` as input values.
@@ -22,8 +22,8 @@ pub struct GadgetStrategy<'a> {
 impl<'a> GadgetStrategy<'a> {
     /// Constructs a new `GadgetStrategy` with the constraint system.
     pub fn new(cs: &'a mut StandardComposer) -> Self {
-        let zero = cs.add_input(Scalar::zero());
-        cs.constrain_to_constant(zero, Scalar::zero(), Scalar::zero());
+        let zero = cs.add_input(BlsScalar::zero());
+        cs.constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
 
         GadgetStrategy { cs, zero, count: 0 }
     }
@@ -39,7 +39,7 @@ impl<'a> GadgetStrategy<'a> {
 impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
     fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [Variable])
     where
-        I: Iterator<Item = &'b Scalar>,
+        I: Iterator<Item = &'b BlsScalar>,
     {
         // Add only for the first round.
         //
@@ -48,10 +48,10 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         if self.count == 0 {
             words.iter_mut().for_each(|w| {
                 *w = self.cs.add(
-                    (Scalar::one(), *w),
-                    (Scalar::zero(), self.zero),
+                    (BlsScalar::one(), *w),
+                    (BlsScalar::zero(), self.zero),
                     Self::next_c(constants),
-                    Scalar::zero(),
+                    BlsScalar::zero(),
                 );
             });
         }
@@ -59,26 +59,34 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
 
     fn quintic_s_box(&mut self, value: &mut Variable) {
         let v2 = self.cs.mul(
-            Scalar::one(),
+            BlsScalar::one(),
             *value,
             *value,
-            Scalar::zero(),
-            Scalar::zero(),
+            BlsScalar::zero(),
+            BlsScalar::zero(),
         );
 
-        let v4 = self
-            .cs
-            .mul(Scalar::one(), v2, v2, Scalar::zero(), Scalar::zero());
+        let v4 = self.cs.mul(
+            BlsScalar::one(),
+            v2,
+            v2,
+            BlsScalar::zero(),
+            BlsScalar::zero(),
+        );
 
-        *value = self
-            .cs
-            .mul(Scalar::one(), v4, *value, Scalar::zero(), Scalar::zero());
+        *value = self.cs.mul(
+            BlsScalar::one(),
+            v4,
+            *value,
+            BlsScalar::zero(),
+            BlsScalar::zero(),
+        );
     }
 
     /// Adds a constraint for each matrix coefficient multiplication
     fn mul_matrix<'b, I>(&mut self, constants: &mut I, values: &mut [Variable])
     where
-        I: Iterator<Item = &'b Scalar>,
+        I: Iterator<Item = &'b BlsScalar>,
     {
         let mut result = [self.zero; WIDTH];
         self.count += 1;
@@ -112,23 +120,23 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
             if self.count < Self::rounds() {
                 c = Self::next_c(constants);
             } else {
-                c = Scalar::zero();
+                c = BlsScalar::zero();
             }
 
             result[j] = self.cs.big_add(
                 (MDS_MATRIX[j][0], values[0]),
                 (MDS_MATRIX[j][1], values[1]),
                 Some((MDS_MATRIX[j][2], values[2])),
-                Scalar::zero(),
-                Scalar::zero(),
+                BlsScalar::zero(),
+                BlsScalar::zero(),
             );
 
             result[j] = self.cs.big_add(
                 (MDS_MATRIX[j][3], values[3]),
                 (MDS_MATRIX[j][4], values[4]),
-                Some((Scalar::one(), result[j])),
+                Some((BlsScalar::one(), result[j])),
                 c,
-                Scalar::zero(),
+                BlsScalar::zero(),
             );
         }
 
@@ -141,11 +149,10 @@ mod tests {
     use crate::{GadgetStrategy, ScalarStrategy, Strategy, WIDTH};
 
     use anyhow::Result;
-    use dusk_bls12_381::Scalar;
     use dusk_plonk::prelude::*;
     use std::mem;
 
-    fn perm(values: &mut [Scalar]) {
+    fn perm(values: &mut [BlsScalar]) {
         let mut strategy = ScalarStrategy::new();
         strategy.perm(values);
     }
@@ -154,25 +161,25 @@ mod tests {
     fn hades_preimage() -> Result<()> {
         const CAPACITY: usize = 2048;
 
-        fn hades() -> ([Scalar; WIDTH], [Scalar; WIDTH]) {
-            let mut input = [Scalar::zero(); WIDTH];
+        fn hades() -> ([BlsScalar; WIDTH], [BlsScalar; WIDTH]) {
+            let mut input = [BlsScalar::zero(); WIDTH];
             input
                 .iter_mut()
-                .for_each(|s| *s = Scalar::random(&mut rand::thread_rng()));
-            let mut output = [Scalar::zero(); WIDTH];
+                .for_each(|s| *s = BlsScalar::random(&mut rand::thread_rng()));
+            let mut output = [BlsScalar::zero(); WIDTH];
             output.copy_from_slice(&input);
             ScalarStrategy::new().perm(&mut output);
             (input, output)
         }
 
         fn hades_gadget_tester(
-            i: [Scalar; WIDTH],
-            o: [Scalar; WIDTH],
+            i: [BlsScalar; WIDTH],
+            o: [BlsScalar; WIDTH],
             composer: &mut StandardComposer,
-        ) -> Vec<Scalar> {
+        ) -> Vec<BlsScalar> {
             let mut perm: [Variable; WIDTH] = [unsafe { mem::zeroed() }; WIDTH];
 
-            let zero = composer.add_input(Scalar::zero());
+            let zero = composer.add_input(BlsScalar::zero());
 
             let mut i_var: [Variable; WIDTH] = [zero; WIDTH];
             i.iter().zip(i_var.iter_mut()).for_each(|(i, v)| {
@@ -190,22 +197,22 @@ mod tests {
             // Copy the result of the permutation into the perm.
             perm.copy_from_slice(&i_var);
 
-            // Check that the Gadget perm results = Scalar perm results
+            // Check that the Gadget perm results = BlsScalar perm results
             i_var.iter().zip(o_var.iter()).for_each(|(p, o)| {
                 composer.add_gate(
                     *p,
                     *o,
                     zero,
-                    -Scalar::one(),
-                    Scalar::one(),
-                    Scalar::zero(),
-                    Scalar::zero(),
-                    Scalar::zero(),
+                    -BlsScalar::one(),
+                    BlsScalar::one(),
+                    BlsScalar::zero(),
+                    BlsScalar::zero(),
+                    BlsScalar::zero(),
                 );
             });
 
             composer.add_dummy_constraints();
-            vec![Scalar::zero()]
+            vec![BlsScalar::zero()]
         }
 
         // Setup OG params.
@@ -232,8 +239,8 @@ mod tests {
 
         // Prepare input & output of the permutation for second Proof test
         prover.clear_witness();
-        let e = [Scalar::from(5000u64); WIDTH];
-        let mut e_perm = [Scalar::from(5000u64); WIDTH];
+        let e = [BlsScalar::from(5000u64); WIDTH];
+        let mut e_perm = [BlsScalar::from(5000u64); WIDTH];
         perm(&mut e_perm);
 
         // Prove 2 with different values
@@ -254,10 +261,10 @@ mod tests {
         // Generate [31, 0, 0, 0, 0] as real input to the perm but build the
         // proof with [31, 31, 31, 31, 31]. This should fail on verification
         // since the Proof contains incorrect statements.
-        let x_scalar = Scalar::from(31u64);
-        let mut x = [Scalar::zero(); WIDTH];
+        let x_scalar = BlsScalar::from(31u64);
+        let mut x = [BlsScalar::zero(); WIDTH];
         x[1] = x_scalar;
-        let mut h = [Scalar::from(31u64); WIDTH];
+        let mut h = [BlsScalar::from(31u64); WIDTH];
         perm(&mut h);
 
         // Prove 3 with wrong inputs
