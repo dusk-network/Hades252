@@ -57,7 +57,7 @@ lazy_static! {
 mod test {
     use super::ROUND_CONSTANTS;
     use dusk_bls12_381::BlsScalar;
-
+    use dusk_bytes::Serializable;
     #[test]
     fn test_round_constants() {
         // Check each element is non-zero
