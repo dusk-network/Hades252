@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.11.0] - 2020-01-26
+## [0.12.0] - 2021-01-27
+
+### Changed
+
+- Bump `dusk-plonk` to `v0.5`
+- Bump `dusk-bls12_381` to `v0.6`
+- Remove `nightly_docs` feature
+
+## [0.11.0] - 2021-01-26
 
 ### Changed
 
