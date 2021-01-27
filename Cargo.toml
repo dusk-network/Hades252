@@ -31,5 +31,4 @@ codegen-units = 1
 
 [features]
 default = ["std"]
-nightly_docs = []
 std = ["dusk-plonk", "dusk-bls12_381/default"]

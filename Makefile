@@ -16,9 +16,9 @@ help: ## Display this help screen
 	@grep -h -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 doc: ## Generate documentation
-	@cargo +nightly rustdoc --lib --features nightly_docs
+	@cargo +nightly rustdoc --lib --all-features
 
 doc-internal: ## Generate documentation with private items
-	@cargo +nightly rustdoc --lib -- --document-private-items --features nightly_docs
+	@cargo +nightly rustdoc --lib -- --document-private-items --all-features
 
 .PHONY: help doc doc-internal publish-doc

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Bump `dusk-plonk` to `v0.5` [#75](https://github.com/dusk-network/hades252/issues/75)
 - Bump `dusk-bls12_381` to `v0.6`
+- Remove `nightly_docs` feature
 
 ## [0.11.0] - 2021-01-26
 
