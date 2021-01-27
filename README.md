@@ -68,25 +68,33 @@ assert_eq!(input.len(), output.len());
 
 ## Example with permutation of Variables using the `GadgetStrategy`
 ```rust
-//! Proving that we know the pre-image of a hades-252 hash.
-use hades252::GadgetStrategy, Strategy, WIDTH};
+// Proving that we know the pre-image of a hades-252 hash.
+use hades252::{GadgetStrategy, Strategy, WIDTH};
 use dusk_plonk::prelude::*;
 
 // Setup OG params.
-let public_parameters = PublicParameters::setup(CAPACITY, &mut rand::thread_rng())?;;
-let (ck, vk) = public_parameters.trim(CAPACITY)?;;
-let domain = EvaluationDomain::new(CAPACITY)?;;
+const CAPACITY: usize = 1 << 7;
+let public_parameters = PublicParameters::setup(CAPACITY, &mut rand::thread_rng()).unwrap();
+let (ck, vk) = public_parameters.trim(CAPACITY).unwrap();;
 
 // Gen composer
 let mut composer = StandardComposer::new();
 
 // Gen inputs
-let mut inputs = [Scalar::one(); WIDTH];
+let mut inputs = [BlsScalar::one(); WIDTH];
 
-let prover = Prover::new(b"Hades_Testing");
+let mut prover = Prover::new(b"Hades_Testing");
 
-// Call the gadget
-GadgetStrategy::hades_gadget(prover.mut_cs(), &mut inputs);
+// Generate the witness data
+let mut composer = prover.mut_cs();
+let zero = composer.add_input(BlsScalar::zero());
+let mut witness = [zero; WIDTH];
+witness.iter_mut()
+    .zip(inputs.iter())
+    .for_each(|(w, i)| *w = composer.add_input(*i));
+
+// Perform the permutation in the circuit
+GadgetStrategy::hades_gadget(prover.mut_cs(), &mut witness);
 
 // Now your composer has been filled with a hades permutation
 // inside.
