@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["GadgetStrategy","Implements a Hades252 strategy for `Variable` as input values. Requires a reference to a `ConstraintSystem`."]]});
