@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2021-02-11
+
+### Changed
+
+- Change crate's name from `Hades252` to `dusk-hades`
+
 ## [0.12.0] - 2021-01-27
 
 ### Changed

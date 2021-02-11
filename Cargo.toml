@@ -1,11 +1,17 @@
 [package]
-name = "hades252"
-version = "0.12.0"
+name = "dusk-hades"
+version = "0.13.0"
 authors = [
   "kev <kevtheappdev@gmail.com>", "zer0 <matteo@dusk.network>",
   "Victor Lopes <victor@dusk.network>", "kr0 <c.perezbaro@gmail.com>"
 ]
 edition = "2018"
+description ="Implementation of Hades252 permutation algorithm over the Bls12-381 Scalar field."
+categories = ["algorithms", "cryptography", "no-std", "wasm"]
+keywords = ["cryptography", "zero-knowledge", "crypto"]
+license = "MPL-2.0"
+repository = "https://github.com/dusk-network/hades252"
+
 build="build/build.rs"
 
 [dependencies]
