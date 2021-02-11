@@ -7,7 +7,7 @@
 
 Implementation of Hades252 permutation algorithm over the Bls12-381 Scalar field.
 
-*Unstable* : No guarantees can be made regarding the API stability.
+_Unstable_ : No guarantees can be made regarding the API stability.
 
 ## Documentation
 
@@ -30,8 +30,6 @@ By default `Hades252` has a `width` equals to `5`.
 It's possible to use an arbitrary value, between `3` and `9`, by setting the
 environment variable `HADES252_WIDTH` to the desired number.
 
-
-
 ## Parameters
 
 - p = `0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001`
@@ -41,21 +39,22 @@ environment variable `HADES252_WIDTH` to the desired number.
 - width = 5
 
 - Number of full rounds = 8 . There are four full rounds at the beginning and four full rounds at the end,
-where each full round has `WIDTH` quintic S-Boxes.
+  where each full round has `WIDTH` quintic S-Boxes.
 
 - Number of partial rounds = 59, where each partial round has one quintic S-Box and (width-1) identity functions.
 
 - Number of round constants = 960
 
 ## Example with permutation of scalars using the `ScalarStrategy`.
+
 ```rust
-use hades252::{ScalarStrategy, Strategy, WIDTH};
+use dusk_hades::{ScalarStrategy, Strategy, WIDTH};
 use dusk_plonk::bls12_381::BlsScalar;
 
 // Generate the inputs that will permute.
 // The number of values we can input is equivalent to `WIDTH`
 
-let input = vec![BlsScalar::from(1u64); hades252::WIDTH];
+let input = vec![BlsScalar::from(1u64); dusk_hades::WIDTH];
 let mut strategy = ScalarStrategy::new();
 
 let mut output = input.clone();
@@ -67,9 +66,10 @@ assert_eq!(input.len(), output.len());
 ```
 
 ## Example with permutation of Variables using the `GadgetStrategy`
+
 ```rust
 // Proving that we know the pre-image of a hades-252 hash.
-use hades252::{GadgetStrategy, Strategy, WIDTH};
+use dusk_hades::{GadgetStrategy, Strategy, WIDTH};
 use dusk_plonk::prelude::*;
 
 // Setup OG params.
@@ -104,7 +104,7 @@ GadgetStrategy::hades_gadget(prover.mut_cs(), &mut witness);
 ## Deviations
 
 - Round constants for the full rounds are generated following: [https://extgit.iaik.tugraz.at/krypto/hadesmimc/blob/master/code/calc_round_numbers.py](https://extgit.iaik.tugraz.at/krypto/hadesmimc/blob/master/code/calc_round_numbers.py)
-They are then mapped onto `Scalar`s in the Ristretto scalar field.
+  They are then mapped onto `Scalar`s in the Ristretto scalar field.
 
 - The MDS matrix is a cauchy matrix, the method used to generate it, is noted in section "Concrete Instantiations Poseidon and Starkad"
 
