@@ -23,7 +23,7 @@ impl<'a> GadgetStrategy<'a> {
     /// Constructs a new `GadgetStrategy` with the constraint system.
     pub fn new(cs: &'a mut StandardComposer) -> Self {
         let zero = cs.add_input(BlsScalar::zero());
-        cs.constrain_to_constant(zero, BlsScalar::zero(), BlsScalar::zero());
+        cs.constrain_to_constant(zero, BlsScalar::zero(), None);
 
         GadgetStrategy { cs, zero, count: 0 }
     }
@@ -51,36 +51,24 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
                     (BlsScalar::one(), *w),
                     (BlsScalar::zero(), self.zero),
                     Self::next_c(constants),
-                    BlsScalar::zero(),
+                    None,
                 );
             });
         }
     }
 
     fn quintic_s_box(&mut self, value: &mut Variable) {
-        let v2 = self.cs.mul(
-            BlsScalar::one(),
-            *value,
-            *value,
-            BlsScalar::zero(),
-            BlsScalar::zero(),
-        );
+        let v2 = self
+            .cs
+            .mul(BlsScalar::one(), *value, *value, BlsScalar::zero(), None);
 
-        let v4 = self.cs.mul(
-            BlsScalar::one(),
-            v2,
-            v2,
-            BlsScalar::zero(),
-            BlsScalar::zero(),
-        );
+        let v4 = self
+            .cs
+            .mul(BlsScalar::one(), v2, v2, BlsScalar::zero(), None);
 
-        *value = self.cs.mul(
-            BlsScalar::one(),
-            v4,
-            *value,
-            BlsScalar::zero(),
-            BlsScalar::zero(),
-        );
+        *value = self
+            .cs
+            .mul(BlsScalar::one(), v4, *value, BlsScalar::zero(), None);
     }
 
     /// Adds a constraint for each matrix coefficient multiplication
@@ -128,7 +116,7 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
                 (MDS_MATRIX[j][1], values[1]),
                 Some((MDS_MATRIX[j][2], values[2])),
                 BlsScalar::zero(),
-                BlsScalar::zero(),
+                None,
             );
 
             result[j] = self.cs.big_add(
@@ -136,7 +124,7 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
                 (MDS_MATRIX[j][4], values[4]),
                 Some((BlsScalar::one(), result[j])),
                 c,
-                BlsScalar::zero(),
+                None,
             );
         }
 
@@ -207,7 +195,7 @@ mod tests {
                     BlsScalar::one(),
                     BlsScalar::zero(),
                     BlsScalar::zero(),
-                    BlsScalar::zero(),
+                    None,
                 );
             });
 
