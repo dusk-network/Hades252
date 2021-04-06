@@ -47,7 +47,7 @@ environment variable `HADES252_WIDTH` to the desired number.
 
 ## Example with permutation of scalars using the `ScalarStrategy`.
 
-```rust
+```ignore
 use dusk_hades::{ScalarStrategy, Strategy, WIDTH};
 use dusk_plonk::bls12_381::BlsScalar;
 
@@ -67,7 +67,7 @@ assert_eq!(input.len(), output.len());
 
 ## Example with permutation of Variables using the `GadgetStrategy`
 
-```rust
+```ignore
 // Proving that we know the pre-image of a hades-252 hash.
 use dusk_hades::{GadgetStrategy, Strategy, WIDTH};
 use dusk_plonk::prelude::*;
