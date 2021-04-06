@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2021-04-06
+
 ### Changed
 
 - Update `plonk` from `0.6` to `v0.7` #81
