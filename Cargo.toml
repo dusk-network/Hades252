@@ -1,6 +1,6 @@
 [package]
 name = "dusk-hades"
-version = "0.14.0"
+version = "0.15.0"
 authors = [
   "kev <kevtheappdev@gmail.com>", "zer0 <matteo@dusk.network>",
   "Victor Lopes <victor@dusk.network>", "kr0 <c.perezbaro@gmail.com>"
@@ -17,7 +17,7 @@ build="build/build.rs"
 [dependencies]
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 dusk-bls12_381 = { version = "0.6", default-features = false }
-dusk-plonk = { version="0.6", optional = true }
+dusk-plonk = { version="0.7", optional = true }
 
 [dev-dependencies]
 rand = "0.7"

@@ -4,12 +4,9 @@
 //
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
-//#![feature(trait_alias)]
-//#![feature(external_doc)]
-//!
 #![deny(missing_docs)]
-#![cfg_attr(feature = "std", feature(external_doc))]
-#![cfg_attr(feature = "std", doc(include = "../README.md"))]
+#![feature(external_doc)]
+#![doc(include = "../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod mds_matrix;
