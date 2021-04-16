@@ -37,6 +37,7 @@ codegen-units = 1
 default = ["alloc"]
 alloc = ["dusk-plonk/alloc"]
 std = [
+        "alloc",
         "dusk-plonk/default",
         "dusk-bls12_381/default",
         "rand_core/std"
