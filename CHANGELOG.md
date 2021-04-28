@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Updated `dusk-bls12_381` & `dusk-plonk` to latest versions. [#84](https://github.com/dusk-network/Hades252/issues/84)
+- Replaced `rand` by `rand-core`. [#86](https://github.com/dusk-network/Hades252/issues/86)
+- Make repo no_std with `alloc` feature. [#87](https://github.com/dusk-network/Hades252/issues/87)
+  
+### Removed
+- Removed `anyhow` from dev-deps`. [#85](https://github.com/dusk-network/Hades252/issues/85)
+
 ## [0.15.0] - 2021-04-06
 
 ### Changed

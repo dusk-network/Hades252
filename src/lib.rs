@@ -7,7 +7,10 @@
 #![deny(missing_docs)]
 #![feature(external_doc)]
 #![doc(include = "../README.md")]
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
 
 mod mds_matrix;
 mod round_constants;
@@ -26,6 +29,6 @@ pub const PARTIAL_ROUNDS: usize = 59;
 /// Maximum input width for the rounds
 pub const WIDTH: usize = 5;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 pub use strategies::GadgetStrategy;
 pub use strategies::{ScalarStrategy, Strategy};

@@ -135,10 +135,11 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{GadgetStrategy, ScalarStrategy, Strategy, WIDTH};
-
-    use anyhow::Result;
+    use alloc::vec::Vec;
+    use core::mem;
+    use core::result::Result;
     use dusk_plonk::prelude::*;
-    use std::mem;
+    use rand_core::OsRng;
 
     fn perm(values: &mut [BlsScalar]) {
         let mut strategy = ScalarStrategy::new();
@@ -146,14 +147,14 @@ mod tests {
     }
 
     #[test]
-    fn hades_preimage() -> Result<()> {
+    fn hades_preimage() -> Result<(), Error> {
         const CAPACITY: usize = 2048;
 
         fn hades() -> ([BlsScalar; WIDTH], [BlsScalar; WIDTH]) {
             let mut input = [BlsScalar::zero(); WIDTH];
             input
                 .iter_mut()
-                .for_each(|s| *s = BlsScalar::random(&mut rand::thread_rng()));
+                .for_each(|s| *s = BlsScalar::random(&mut OsRng));
             let mut output = [BlsScalar::zero(); WIDTH];
             output.copy_from_slice(&input);
             ScalarStrategy::new().perm(&mut output);
@@ -200,11 +201,11 @@ mod tests {
             });
 
             composer.add_dummy_constraints();
-            vec![BlsScalar::zero()]
+            alloc::vec![BlsScalar::zero()]
         }
 
         // Setup OG params.
-        let public_parameters = PublicParameters::setup(CAPACITY, &mut rand::thread_rng())?;
+        let public_parameters = PublicParameters::setup(CAPACITY, &mut OsRng)?;
         let (ck, vk) = public_parameters.trim(CAPACITY)?;
 
         let (i, o) = hades();
