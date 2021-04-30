@@ -1,13 +1,10 @@
-[![Build Status](https://travis-ci.com/dusk-network/Hades252.svg?branch=master)](https://travis-ci.com/dusk-network/Hades252)
-[![codecov](https://codecov.io/gh/dusk-network/Hades252/branch/master/graph/badge.svg)](https://codecov.io/gh/dusk-network/Hades252)
-[![Repository](https://dusk-network.github.io/Hades252/repo-badge.svg)](https://github.com/dusk-network/Hades252)
-[![Documentation](https://dusk-network.github.io/Hades252/badge.svg)](https://dusk-network.github.io/Hades252/index.html)
+![Build Status](https://github.com/dusk-network/hades252/workflows/Continuous%20integration/badge.svg)
+[![Repository](https://img.shields.io/badge/github-hades252-blueviolet?logo=github)](https://github.com/dusk-network/hades252)
+[![Documentation](https://img.shields.io/badge/docs-dusk--hades-blue?logo=rust)](https://docs.rs/dusk-hades/)
 
 # Hades252
 
 Implementation of Hades252 permutation algorithm over the Bls12-381 Scalar field.
-
-_Unstable_ : No guarantees can be made regarding the API stability.
 
 ## Documentation
 
@@ -23,7 +20,7 @@ make doc-internal
 To import `Hades252`, add the following to the dependencies section of your project's `Cargo.toml`:
 
 ```toml
-Hades252 = "0.12.0"
+dusk-hades = "0.16.0"
 ```
 
 By default `Hades252` has a `width` equals to `5`.
