@@ -23,9 +23,7 @@ To import `Hades252`, add the following to the dependencies section of your proj
 dusk-hades = "0.16.0"
 ```
 
-By default `Hades252` has a `width` equals to `5`.
-It's possible to use an arbitrary value, between `3` and `9`, by setting the
-environment variable `HADES252_WIDTH` to the desired number.
+`Hades252` works with a const `width` set to `5`.
 
 ## Parameters
 
@@ -101,7 +99,6 @@ GadgetStrategy::hades_gadget(prover.mut_cs(), &mut witness);
 ## Deviations
 
 - Round constants for the full rounds are generated following: [https://extgit.iaik.tugraz.at/krypto/hadesmimc/blob/master/code/calc_round_numbers.py](https://extgit.iaik.tugraz.at/krypto/hadesmimc/blob/master/code/calc_round_numbers.py)
-  They are then mapped onto `Scalar`s in the Ristretto scalar field.
 
 - The MDS matrix is a cauchy matrix, the method used to generate it, is noted in section "Concrete Instantiations Poseidon and Starkad"
 
