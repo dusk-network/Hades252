@@ -11,7 +11,6 @@ categories = ["algorithms", "cryptography", "no-std", "wasm"]
 keywords = ["cryptography", "zero-knowledge", "crypto"]
 license = "MPL-2.0"
 repository = "https://github.com/dusk-network/hades252"
-build="build/build.rs"
 
 [dependencies]
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }

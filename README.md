@@ -23,9 +23,8 @@ To import `Hades252`, add the following to the dependencies section of your proj
 dusk-hades = "0.16.0"
 ```
 
-By default `Hades252` has a `width` equals to `5`.
-It's possible to use an arbitrary value, between `3` and `9`, by setting the
-environment variable `HADES252_WIDTH` to the desired number.
+`Hades252` has a `width` equals to `5`; it's possible to use a different value,
+see [How to generate the assets](assets/HOWTO.md).
 
 ## Parameters
 
@@ -42,9 +41,9 @@ environment variable `HADES252_WIDTH` to the desired number.
 
 - Number of round constants = 960
 
-## Example with permutation of scalars using the `ScalarStrategy`.
+## Example with permutation of scalars using the `ScalarStrategy`
 
-```ignore
+```rust ignore
 use dusk_hades::{ScalarStrategy, Strategy, WIDTH};
 use dusk_plonk::bls12_381::BlsScalar;
 
@@ -53,7 +52,7 @@ use dusk_plonk::bls12_381::BlsScalar;
 
 let input = vec![BlsScalar::from(1u64); dusk_hades::WIDTH];
 let mut strategy = ScalarStrategy::new();
-
+#
 let mut output = input.clone();
 strategy.perm(output.as_mut_slice());
 
@@ -64,7 +63,7 @@ assert_eq!(input.len(), output.len());
 
 ## Example with permutation of Variables using the `GadgetStrategy`
 
-```ignore
+```rust ignore
 // Proving that we know the pre-image of a hades-252 hash.
 use dusk_hades::{GadgetStrategy, Strategy, WIDTH};
 use dusk_plonk::prelude::*;
@@ -101,7 +100,6 @@ GadgetStrategy::hades_gadget(prover.mut_cs(), &mut witness);
 ## Deviations
 
 - Round constants for the full rounds are generated following: [https://extgit.iaik.tugraz.at/krypto/hadesmimc/blob/master/code/calc_round_numbers.py](https://extgit.iaik.tugraz.at/krypto/hadesmimc/blob/master/code/calc_round_numbers.py)
-  They are then mapped onto `Scalar`s in the Ristretto scalar field.
 
 - The MDS matrix is a cauchy matrix, the method used to generate it, is noted in section "Concrete Instantiations Poseidon and Starkad"
 
