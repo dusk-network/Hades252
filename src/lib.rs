@@ -32,3 +32,16 @@ pub const WIDTH: usize = 5;
 #[cfg(feature = "alloc")]
 pub use strategies::GadgetStrategy;
 pub use strategies::{ScalarStrategy, Strategy};
+
+pub(crate) const fn u64_from_buffer<const N: usize>(buf: &[u8; N], i: usize) -> u64 {
+    u64::from_le_bytes([
+        buf[i],
+        buf[i + 1],
+        buf[i + 2],
+        buf[i + 3],
+        buf[i + 4],
+        buf[i + 5],
+        buf[i + 6],
+        buf[i + 7],
+    ])
+}

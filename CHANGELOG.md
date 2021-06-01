@@ -8,12 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- Updated `dusk-bls12_381` & `dusk-plonk` to latest versions. [#84](https://github.com/dusk-network/Hades252/issues/84)
-- Replaced `rand` by `rand-core`. [#86](https://github.com/dusk-network/Hades252/issues/86)
-- Make repo no_std with `alloc` feature. [#87](https://github.com/dusk-network/Hades252/issues/87)
-  
+
+- Updated `dusk-bls12_381` & `dusk-plonk` to latest versions. [#84]
+- Replaced `rand` by `rand-core` [#86]
+- Change repo to `no_std` with `alloc` feature [#87]
+- Change `ROUND_CONSTANTS` and `MDS_MATRIX` to be generated at compile time [#96]
+
 ### Removed
-- Removed `anyhow` from dev-deps`. [#85](https://github.com/dusk-network/Hades252/issues/85)
+
+- Removed `anyhow` from dev-deps [#85]
+- Removed `lazy_static` as dependency
 
 ## [0.15.0] - 2021-04-06
 
@@ -169,3 +173,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Strategy structure.
 - Use `curve25519-dalek` as curve-backend.
 - Use `bulletproofs` as proving system.
+
+### Removed
+
+- Removed `anyhow` from dev-deps` [#85](https://github.com/dusk-network/Hades252/issues/85)
+
+[#96]: https://github.com/dusk-network/Hades252/issues/96
+[#87]: https://github.com/dusk-network/Hades252/issues/87
+[#86]: https://github.com/dusk-network/Hades252/issues/86
+[#84]: https://github.com/dusk-network/Hades252/issues/84
+[unreleased]: https://github.com/dusk-network/dusk-abi/compare/v0.2.0...HEAD
+[0.15.0]: https://github.com/dusk-network/dusk-abi/compare/v0.14.0...v0.15.0
+[0.14.0]: https://github.com/dusk-network/dusk-abi/compare/v0.13.0...v0.14.0
+[0.13.0]: https://github.com/dusk-network/dusk-abi/compare/v0.12.0...v0.13.0
+[0.12.0]: https://github.com/dusk-network/dusk-abi/compare/v0.11.0...v0.12.0
+[0.11.0]: https://github.com/dusk-network/dusk-abi/compare/v0.10.1...v0.11.0
+[0.10.1]: https://github.com/dusk-network/dusk-abi/compare/v0.10.0...v0.10.1
+[0.10.0]: https://github.com/dusk-network/dusk-abi/compare/v0.9.0...v0.10.0
+[0.9.0]: https://github.com/dusk-network/dusk-abi/compare/v0.8.1...v0.9.0
+[0.8.1]: https://github.com/dusk-network/dusk-abi/compare/v0.8.0...v0.8.1
+[0.8.0]: https://github.com/dusk-network/dusk-abi/compare/v0.7.0...v0.8.0
+[0.7.0]: https://github.com/dusk-network/dusk-abi/compare/v0.6.1...v0.7.0
+[0.6.1]: https://github.com/dusk-network/dusk-abi/compare/v0.6.0...v0.6.1
+[0.6.0]: https://github.com/dusk-network/dusk-abi/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/dusk-network/dusk-abi/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/dusk-network/dusk-abi/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/dusk-network/dusk-abi/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/dusk-network/dusk-abi/compare/v0.1.0...v0.2.0
+[0.1.1]: https://github.com/dusk-network/dusk-abi/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/dusk-network/dusk-abi/releases/tag/v0.1.0
