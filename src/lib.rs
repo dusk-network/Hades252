@@ -5,9 +5,8 @@
 // Copyright (c) DUSK NETWORK. All rights reserved.
 
 #![deny(missing_docs)]
-#![feature(external_doc)]
-#![doc(include = "../README.md")]
 #![no_std]
+#![doc = include_str!("../README.md")]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
