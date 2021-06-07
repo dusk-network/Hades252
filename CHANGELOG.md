@@ -7,39 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+### Add
 
+- Add toolchain file set to nightly-2021-06-06 [#99]
+
+### Change
+
+- Change CI toolchain to not override toolchain-file [#99]
 - Updated `dusk-bls12_381` & `dusk-plonk` to latest versions. [#84]
 - Replaced `rand` by `rand-core` [#86]
 - Change repo to `no_std` with `alloc` feature [#87]
 - Change `ROUND_CONSTANTS` and `MDS_MATRIX` to be generated at compile time [#96]
 
-### Removed
+### Remove
 
 - Removed `anyhow` from dev-deps [#85]
 - Removed `lazy_static` as dependency
 
+### Fix
+
+- Fix `Readme.md` import into lib docs [#98]
+
 ## [0.15.0] - 2021-04-06
 
-### Changed
+### Change
 
 - Update `plonk` from `0.6` to `v0.7` #81
 
 ## [0.14.0] - 2021-03-11
 
-### Changed
+### Change
 
 - Update `plonk` from `0.5` to `v0.6` #79
 
 ## [0.13.0] - 2021-02-11
 
-### Changed
+### Change
 
 - Change crate's name from `Hades252` to `dusk-hades`
 
 ## [0.12.0] - 2021-01-27
 
-### Changed
+### Change
 
 - Bump `dusk-plonk` to `v0.5`
 - Bump `dusk-bls12_381` to `v0.6`
@@ -47,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.11.0] - 2021-01-26
 
-### Changed
+### Change
 
 - Bump `dusk-plonk` to `v0.4`
 - Bump `dusk-bls12_381` to `v0.5`
@@ -55,113 +64,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.10.1] - 2020-11-09
 
-### Changed
+### Change
 
 - Update to support full no-std.
 
 ## [0.10.0] - 2020-10-06
 
-### Fixed
+### Fix
 
 - Fixes #69 - ARK on partial round must be applied to all elements.
 
 ## [0.9.0] - 2020-10-05
 
-### Changed
+### Change
 
 - Major optimization on `GadgetStrategy` with fan-in-3 feature of PLONK.
   Gates per permutation set to `973`
 
 ## [0.8.1] - 2020-10-04
 
-### Changed
+### Change
 
 - Optimize `GadgetStrategy` to consume less gates.
 
 ## [0.8.0] - 2020-09-29
 
-### Changed
+### Change
 
 - Bump `dusk-plonk` to `v0.2.11`.
 
 ## [0.7.0] - 2020-08-13
 
-### Added
+### Add
 
 - `anyhow` crate to support Error handling in the tests.
 
-### Changed
+### Change
 
 - Updated the `dusk-plonk` versions to `v0.2.7`.
 
-### Removed
+### Remove
 
 - Legacy methods to perform `poseidon-based ops` such as hashing
   which is not the purpose of this lib.
 
 ## [0.6.1] - 2020-07-24
 
-### Changed
+### Change
 
 - `dusk-plonk` crate version to `0.2.1`.
 
 ## [0.6.0] - 2020-07-21
 
-### Changed
+### Change
 
 - `dusk-plonk` crate version to `v0.2.0`
 - Tests for gadgets now use the Prover&Verifier abstraction.
 
-### Removed
+### Remove
 
 - `dusk-bls12_381` deps which are now taken from plonk's re-exported ones.
 
 ## [0.5.0] - 2020-05-11
 
-### Added
+### Add
 
 - `dusk-plonk_v0.1.0` as proving system.
 - `dusk-bls12_381_v0.1.0` as curve-backend
 
-### Changed
+### Change
 
 - `GadgetStrategy` structure refactor & optimization.
 - tests updated & refactored with the new proving system.
 
-### Removed
+### Remove
 
 - `Bulletproofs` is no longer the proving system used.
 - `Curve25519-dalek` is no longer used as curve-backend.
 
 ## [0.4.0] - 2020-04-12
 
-### Added
+### Add
 
 - Plonk/fast_prover_zexe backend for ZK-Gadget functions
 - Algebra, poly_commit & num_traits from Zexe as dependencies to work with PLONK.
 
-### Changed
+### Change
 
 - Refactored the tests to work with the new ZK-Proof algorithm Plonk.
 
-### Fixed
+### Fix
 
 - Reduced the size of the circuit produced by reducing some gates that could be merged.
 
-### Removed
+### Remove
 
 - Bulletproofs dependencies removal.
 - Curve25519 dependencies removal.
 
 ## [0.3.0] - 2020-03-21
 
-### Changed
+### Change
 
 - Bulletproofs dependencies change to use dusk-network/bulletproofs "branch=develop".
 
 ## [0.2.0] - 2020-03-15
 
-### Changed
+### Change
 
 - Bulletproofs dependencies change to use dusk-network/bulletproofs "branch=dalek_v2".
 
@@ -174,13 +183,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use `curve25519-dalek` as curve-backend.
 - Use `bulletproofs` as proving system.
 
-### Removed
 
-- Removed `anyhow` from dev-deps` [#85](https://github.com/dusk-network/Hades252/issues/85)
-
+[#99]: https://github.com/dusk-network/Hades252/issues/99
+[#98]: https://github.com/dusk-network/Hades252/issues/98
 [#96]: https://github.com/dusk-network/Hades252/issues/96
 [#87]: https://github.com/dusk-network/Hades252/issues/87
 [#86]: https://github.com/dusk-network/Hades252/issues/86
+[#85]: (https://github.com/dusk-network/Hades252/issues/85)
 [#84]: https://github.com/dusk-network/Hades252/issues/84
 [unreleased]: https://github.com/dusk-network/dusk-abi/compare/v0.2.0...HEAD
 [0.15.0]: https://github.com/dusk-network/dusk-abi/compare/v0.14.0...v0.15.0
