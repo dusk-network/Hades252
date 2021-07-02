@@ -7,48 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Add
+## [0.16.0] - 2021-07-02
+### Added
 
 - Add toolchain file set to nightly-2021-06-06 [#99]
 
-### Change
+### Changed
 
 - Change CI toolchain to not override toolchain-file [#99]
-- Updated `dusk-bls12_381` & `dusk-plonk` to latest versions. [#84]
-- Replaced `rand` by `rand-core` [#86]
+- Update `dusk-bls12_381` & `dusk-plonk` to latest versions. [#84]
+- Replace `rand` by `rand-core` [#86]
 - Change repo to `no_std` with `alloc` feature [#87]
 - Change `ROUND_CONSTANTS` and `MDS_MATRIX` to be generated at compile time [#96]
 
-### Remove
+### Removed
 
-- Removed `anyhow` from dev-deps [#85]
-- Removed `lazy_static` as dependency
+- Remove `anyhow` from dev-deps [#85]
+- Remove `lazy_static` as dependency
 
-### Fix
+### Fixed
 
 - Fix `Readme.md` import into lib docs [#98]
 
 ## [0.15.0] - 2021-04-06
 
-### Change
+### Changed
 
 - Update `plonk` from `0.6` to `v0.7` #81
 
 ## [0.14.0] - 2021-03-11
 
-### Change
+### Changed
 
 - Update `plonk` from `0.5` to `v0.6` #79
 
 ## [0.13.0] - 2021-02-11
 
-### Change
+### Changed
 
 - Change crate's name from `Hades252` to `dusk-hades`
 
 ## [0.12.0] - 2021-01-27
 
-### Change
+### Changed
 
 - Bump `dusk-plonk` to `v0.5`
 - Bump `dusk-bls12_381` to `v0.6`
@@ -56,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.11.0] - 2021-01-26
 
-### Change
+### Changed
 
 - Bump `dusk-plonk` to `v0.4`
 - Bump `dusk-bls12_381` to `v0.5`
@@ -64,119 +65,119 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.10.1] - 2020-11-09
 
-### Change
+### Changed
 
 - Update to support full no-std.
 
 ## [0.10.0] - 2020-10-06
 
-### Fix
+### Fixed
 
 - Fixes #69 - ARK on partial round must be applied to all elements.
 
 ## [0.9.0] - 2020-10-05
 
-### Change
+### Changed
 
 - Major optimization on `GadgetStrategy` with fan-in-3 feature of PLONK.
   Gates per permutation set to `973`
 
 ## [0.8.1] - 2020-10-04
 
-### Change
+### Changed
 
 - Optimize `GadgetStrategy` to consume less gates.
 
 ## [0.8.0] - 2020-09-29
 
-### Change
+### Changed
 
 - Bump `dusk-plonk` to `v0.2.11`.
 
 ## [0.7.0] - 2020-08-13
 
-### Add
+### Added
 
 - `anyhow` crate to support Error handling in the tests.
 
-### Change
+### Changed
 
-- Updated the `dusk-plonk` versions to `v0.2.7`.
+- Update the `dusk-plonk` versions to `v0.2.7`.
 
-### Remove
+### Removed
 
 - Legacy methods to perform `poseidon-based ops` such as hashing
   which is not the purpose of this lib.
 
 ## [0.6.1] - 2020-07-24
 
-### Change
+### Changed
 
 - `dusk-plonk` crate version to `0.2.1`.
 
 ## [0.6.0] - 2020-07-21
 
-### Change
+### Changed
 
 - `dusk-plonk` crate version to `v0.2.0`
 - Tests for gadgets now use the Prover&Verifier abstraction.
 
-### Remove
+### Removed
 
 - `dusk-bls12_381` deps which are now taken from plonk's re-exported ones.
 
 ## [0.5.0] - 2020-05-11
 
-### Add
+### Added
 
 - `dusk-plonk_v0.1.0` as proving system.
 - `dusk-bls12_381_v0.1.0` as curve-backend
 
-### Change
+### Changed
 
 - `GadgetStrategy` structure refactor & optimization.
 - tests updated & refactored with the new proving system.
 
-### Remove
+### Removed
 
 - `Bulletproofs` is no longer the proving system used.
 - `Curve25519-dalek` is no longer used as curve-backend.
 
 ## [0.4.0] - 2020-04-12
 
-### Add
+### Added
 
 - Plonk/fast_prover_zexe backend for ZK-Gadget functions
 - Algebra, poly_commit & num_traits from Zexe as dependencies to work with PLONK.
 
-### Change
+### Changed
 
-- Refactored the tests to work with the new ZK-Proof algorithm Plonk.
+- Refactor the tests to work with the new ZK-Proof algorithm Plonk.
 
-### Fix
+### Fixed
 
-- Reduced the size of the circuit produced by reducing some gates that could be merged.
+- Reduce the size of the circuit produced by reducing some gates that could be merged.
 
-### Remove
+### Removed
 
 - Bulletproofs dependencies removal.
 - Curve25519 dependencies removal.
 
 ## [0.3.0] - 2020-03-21
 
-### Change
+### Changed
 
 - Bulletproofs dependencies change to use dusk-network/bulletproofs "branch=develop".
 
 ## [0.2.0] - 2020-03-15
 
-### Change
+### Changed
 
 - Bulletproofs dependencies change to use dusk-network/bulletproofs "branch=dalek_v2".
 
 ## [0.1.0] - 2020-02-27
 
-### Added
+### Addeded
 
 - Basic Hades252 implementation.
 - Strategy structure.
@@ -192,6 +193,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#85]: (https://github.com/dusk-network/Hades252/issues/85)
 [#84]: https://github.com/dusk-network/Hades252/issues/84
 [unreleased]: https://github.com/dusk-network/dusk-abi/compare/v0.2.0...HEAD
+[0.16.0]: https://github.com/dusk-network/dusk-abi/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/dusk-network/dusk-abi/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/dusk-network/dusk-abi/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/dusk-network/dusk-abi/compare/v0.12.0...v0.13.0
