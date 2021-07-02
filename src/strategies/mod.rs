@@ -17,13 +17,13 @@ use crate::{round_constants::ROUND_CONSTANTS, PARTIAL_ROUNDS, TOTAL_FULL_ROUNDS}
 use dusk_bls12_381::BlsScalar;
 
 /// Strategy for zero-knowledge plonk circuits
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 pub mod gadget;
 
 /// Strategy for scalars
 pub mod scalar;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 pub use gadget::GadgetStrategy;
 pub use scalar::ScalarStrategy;
 

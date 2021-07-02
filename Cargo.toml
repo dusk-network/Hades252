@@ -1,6 +1,6 @@
 [package]
 name = "dusk-hades"
-version = "0.15.0"
+version = "0.16.0"
 authors = [
   "kev <kevtheappdev@gmail.com>", "zer0 <matteo@dusk.network>",
   "Victor Lopes <victor@dusk.network>", "kr0 <c.perezbaro@gmail.com>"
@@ -12,22 +12,17 @@ keywords = ["cryptography", "zero-knowledge", "crypto"]
 license = "MPL-2.0"
 repository = "https://github.com/dusk-network/hades252"
 
-build="build/build.rs"
-
 [dependencies]
-lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
-dusk-bls12_381 = { version = "0.6", default-features = false }
-dusk-plonk = { version="0.7", optional = true }
+dusk-bls12_381 = { version = "0.8", default-features = false }
+dusk-plonk = { version="0.8",default-features = false, optional = true }
 
 [dev-dependencies]
-rand = "0.7"
-criterion = "0.3"
-anyhow = "1.0"
+rand_core = {version = "0.6",default-features = false}
 dusk-bytes = "0.1"
 
 [build-dependencies]
 sha2 = "0.8"
-dusk-bls12_381 = { version = "0.6", default-features = false }
+dusk-bls12_381 = { version = "0.8"}
 
 [profile.release]
 panic = 'abort'
@@ -36,5 +31,10 @@ incremental = false
 codegen-units = 1
 
 [features]
-default = ["std"]
-std = ["dusk-plonk", "dusk-bls12_381/default"]
+default = ["alloc"]
+alloc = ["dusk-plonk/alloc"]
+plonk-std = [
+        "alloc",
+        "dusk-plonk/default",
+        "dusk-bls12_381/default",
+      ]
