@@ -1,11 +1,11 @@
 [package]
 name = "dusk-hades"
-version = "0.16.0"
+version = "0.17.0-rc.0"
 authors = [
   "kev <kevtheappdev@gmail.com>", "zer0 <matteo@dusk.network>",
   "Victor Lopes <victor@dusk.network>", "kr0 <c.perezbaro@gmail.com>"
 ]
-edition = "2018"
+edition = "2021"
 description ="Implementation of Hades252 permutation algorithm over the Bls12-381 Scalar field."
 categories = ["algorithms", "cryptography", "no-std", "wasm"]
 keywords = ["cryptography", "zero-knowledge", "crypto"]
@@ -14,15 +14,15 @@ repository = "https://github.com/dusk-network/hades252"
 
 [dependencies]
 dusk-bls12_381 = { version = "0.8", default-features = false }
-dusk-plonk = { version="0.8",default-features = false, optional = true }
+dusk-plonk = { version = "0.9", default-features = false, features = [ "alloc" ], optional = true }
 
 [dev-dependencies]
-rand_core = {version = "0.6",default-features = false}
+rand = "0.8"
 dusk-bytes = "0.1"
 
 [build-dependencies]
 sha2 = "0.8"
-dusk-bls12_381 = { version = "0.8"}
+dusk-bls12_381 = "0.8"
 
 [profile.release]
 panic = 'abort'
@@ -31,10 +31,4 @@ incremental = false
 codegen-units = 1
 
 [features]
-default = ["alloc"]
-alloc = ["dusk-plonk/alloc"]
-plonk-std = [
-        "alloc",
-        "dusk-plonk/default",
-        "dusk-bls12_381/default",
-      ]
+plonk = ["dusk-plonk"]
