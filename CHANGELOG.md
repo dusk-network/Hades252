@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Update `dusk-plonk` to `0.9` [#101]
+
 ## [0.16.0] - 2021-07-02
 ### Added
 
@@ -185,6 +189,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use `bulletproofs` as proving system.
 
 
+[#101]: https://github.com/dusk-network/Hades252/issues/101
 [#99]: https://github.com/dusk-network/Hades252/issues/99
 [#98]: https://github.com/dusk-network/Hades252/issues/98
 [#96]: https://github.com/dusk-network/Hades252/issues/96
@@ -192,7 +197,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#86]: https://github.com/dusk-network/Hades252/issues/86
 [#85]: (https://github.com/dusk-network/Hades252/issues/85)
 [#84]: https://github.com/dusk-network/Hades252/issues/84
-[unreleased]: https://github.com/dusk-network/dusk-abi/compare/v0.2.0...HEAD
+[unreleased]: https://github.com/dusk-network/dusk-abi/compare/v0.17.0-rc.0...HEAD
 [0.16.0]: https://github.com/dusk-network/dusk-abi/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/dusk-network/dusk-abi/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/dusk-network/dusk-abi/compare/v0.13.0...v0.14.0

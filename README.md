@@ -41,40 +41,37 @@ see [How to generate the assets](assets/HOWTO.md).
 
 - Number of round constants = 960
 
-## Example with permutation of scalars using the `ScalarStrategy`
+## Example for `ScalarStrategy`
 
-```rust ignore
+```rust
+use dusk_bls12_381::BlsScalar;
 use dusk_hades::{ScalarStrategy, Strategy, WIDTH};
-use dusk_plonk::bls12_381::BlsScalar;
 
 // Generate the inputs that will permute.
 // The number of values we can input is equivalent to `WIDTH`
 
 let input = vec![BlsScalar::from(1u64); dusk_hades::WIDTH];
-let mut strategy = ScalarStrategy::new();
-#
 let mut output = input.clone();
+
+let mut strategy = ScalarStrategy::new();
 strategy.perm(output.as_mut_slice());
 
 assert_ne!(&input, &output);
 assert_eq!(input.len(), output.len());
-
 ```
 
-## Example with permutation of Variables using the `GadgetStrategy`
+## Example for `GadgetStrategy`
 
-```rust ignore
+```rust,ignore
 // Proving that we know the pre-image of a hades-252 hash.
 use dusk_hades::{GadgetStrategy, Strategy, WIDTH};
 use dusk_plonk::prelude::*;
 
 // Setup OG params.
-const CAPACITY: usize = 1 << 7;
+const CAPACITY: usize = 1 << 10;
+
 let public_parameters = PublicParameters::setup(CAPACITY, &mut rand::thread_rng()).unwrap();
 let (ck, vk) = public_parameters.trim(CAPACITY).unwrap();;
-
-// Gen composer
-let mut composer = StandardComposer::new();
 
 // Gen inputs
 let mut inputs = [BlsScalar::one(); WIDTH];
@@ -82,15 +79,16 @@ let mut inputs = [BlsScalar::one(); WIDTH];
 let mut prover = Prover::new(b"Hades_Testing");
 
 // Generate the witness data
-let mut composer = prover.mut_cs();
-let zero = composer.add_input(BlsScalar::zero());
+let mut composer = prover.composer_mut();
+let zero = TurboComposer::constant_zero();
+
 let mut witness = [zero; WIDTH];
 witness.iter_mut()
     .zip(inputs.iter())
-    .for_each(|(w, i)| *w = composer.add_input(*i));
+    .for_each(|(w, i)| *w = composer.append_witness(*i));
 
 // Perform the permutation in the circuit
-GadgetStrategy::hades_gadget(prover.mut_cs(), &mut witness);
+GadgetStrategy::gadget(prover.composer_mut(), &mut witness);
 
 // Now your composer has been filled with a hades permutation
 // inside.

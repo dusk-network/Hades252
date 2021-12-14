@@ -10,34 +10,36 @@ use crate::WIDTH;
 use dusk_bls12_381::BlsScalar;
 use dusk_plonk::prelude::*;
 
-/// Implements a Hades252 strategy for `Variable` as input values.
+/// Implements a Hades252 strategy for `Witness` as input values.
 /// Requires a reference to a `ConstraintSystem`.
 pub struct GadgetStrategy<'a> {
     /// A reference to the constraint system used by the gadgets
-    pub cs: &'a mut StandardComposer,
-    zero: Variable,
+    cs: &'a mut TurboComposer,
     count: usize,
 }
 
 impl<'a> GadgetStrategy<'a> {
     /// Constructs a new `GadgetStrategy` with the constraint system.
-    pub fn new(cs: &'a mut StandardComposer) -> Self {
-        let zero = cs.add_input(BlsScalar::zero());
-        cs.constrain_to_constant(zero, BlsScalar::zero(), None);
-
-        GadgetStrategy { cs, zero, count: 0 }
+    pub fn new(cs: &'a mut TurboComposer) -> Self {
+        GadgetStrategy { cs, count: 0 }
     }
 
     /// Perform the hades permutation on a plonk circuit
-    pub fn hades_gadget(composer: &'a mut StandardComposer, x: &mut [Variable]) {
+    pub fn gadget(composer: &'a mut TurboComposer, x: &mut [Witness]) {
         let mut strategy = GadgetStrategy::new(composer);
 
         strategy.perm(x);
     }
 }
 
-impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
-    fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [Variable])
+impl AsMut<TurboComposer> for GadgetStrategy<'_> {
+    fn as_mut(&mut self) -> &mut TurboComposer {
+        self.cs
+    }
+}
+
+impl<'a> Strategy<Witness> for GadgetStrategy<'a> {
+    fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [Witness])
     where
         I: Iterator<Item = &'b BlsScalar>,
     {
@@ -47,36 +49,33 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
         // to the linear layer
         if self.count == 0 {
             words.iter_mut().for_each(|w| {
-                *w = self.cs.add(
-                    (BlsScalar::one(), *w),
-                    (BlsScalar::zero(), self.zero),
-                    Self::next_c(constants),
-                    None,
-                );
+                let constant = Self::next_c(constants);
+                let constraint = Constraint::new().left(1).a(*w).constant(constant);
+
+                *w = self.cs.gate_add(constraint);
             });
         }
     }
 
-    fn quintic_s_box(&mut self, value: &mut Variable) {
-        let v2 = self
-            .cs
-            .mul(BlsScalar::one(), *value, *value, BlsScalar::zero(), None);
+    fn quintic_s_box(&mut self, value: &mut Witness) {
+        let constraint = Constraint::new().mult(1).a(*value).b(*value);
+        let v2 = self.cs.gate_mul(constraint);
 
-        let v4 = self
-            .cs
-            .mul(BlsScalar::one(), v2, v2, BlsScalar::zero(), None);
+        let constraint = Constraint::new().mult(1).a(v2).b(v2);
+        let v4 = self.cs.gate_mul(constraint);
 
-        *value = self
-            .cs
-            .mul(BlsScalar::one(), v4, *value, BlsScalar::zero(), None);
+        let constraint = Constraint::new().mult(1).a(v4).b(*value);
+        *value = self.cs.gate_mul(constraint);
     }
 
     /// Adds a constraint for each matrix coefficient multiplication
-    fn mul_matrix<'b, I>(&mut self, constants: &mut I, values: &mut [Variable])
+    fn mul_matrix<'b, I>(&mut self, constants: &mut I, values: &mut [Witness])
     where
         I: Iterator<Item = &'b BlsScalar>,
     {
-        let mut result = [self.zero; WIDTH];
+        let zero = TurboComposer::constant_zero();
+
+        let mut result = [zero; WIDTH];
         self.count += 1;
 
         // Implementation optimized for WIDTH = 5
@@ -111,21 +110,26 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
                 c = BlsScalar::zero();
             }
 
-            result[j] = self.cs.big_add(
-                (MDS_MATRIX[j][0], values[0]),
-                (MDS_MATRIX[j][1], values[1]),
-                Some((MDS_MATRIX[j][2], values[2])),
-                BlsScalar::zero(),
-                None,
-            );
+            let constraint = Constraint::new()
+                .left(MDS_MATRIX[j][0])
+                .a(values[0])
+                .right(MDS_MATRIX[j][1])
+                .b(values[1])
+                .fourth(MDS_MATRIX[j][2])
+                .d(values[2]);
 
-            result[j] = self.cs.big_add(
-                (MDS_MATRIX[j][3], values[3]),
-                (MDS_MATRIX[j][4], values[4]),
-                Some((BlsScalar::one(), result[j])),
-                c,
-                None,
-            );
+            result[j] = self.cs.gate_add(constraint);
+
+            let constraint = Constraint::new()
+                .left(MDS_MATRIX[j][3])
+                .a(values[3])
+                .right(MDS_MATRIX[j][4])
+                .b(values[4])
+                .fourth(1)
+                .d(result[j])
+                .constant(c);
+
+            result[j] = self.cs.gate_add(constraint);
         }
 
         values.copy_from_slice(&result);
@@ -135,135 +139,137 @@ impl<'a> Strategy<Variable> for GadgetStrategy<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{GadgetStrategy, ScalarStrategy, Strategy, WIDTH};
-    use alloc::vec::Vec;
-    use core::mem;
     use core::result::Result;
     use dusk_plonk::prelude::*;
-    use rand_core::OsRng;
 
-    fn perm(values: &mut [BlsScalar]) {
-        let mut strategy = ScalarStrategy::new();
-        strategy.perm(values);
+    /// Generate a random input and perform a permutation
+    fn hades() -> ([BlsScalar; WIDTH], [BlsScalar; WIDTH]) {
+        let mut input = [BlsScalar::zero(); WIDTH];
+
+        input
+            .iter_mut()
+            .for_each(|s| *s = BlsScalar::random(&mut rand::thread_rng()));
+
+        let mut output = [BlsScalar::zero(); WIDTH];
+
+        output.copy_from_slice(&input);
+        ScalarStrategy::new().perm(&mut output);
+
+        (input, output)
+    }
+
+    /// Permutate `i` in a circuit and assert the result equals `o`
+    fn hades_gadget_tester(
+        i: [BlsScalar; WIDTH],
+        o: [BlsScalar; WIDTH],
+        composer: &mut TurboComposer,
+    ) {
+        let zero = TurboComposer::constant_zero();
+
+        let mut perm: [Witness; WIDTH] = [zero; WIDTH];
+
+        let mut i_var: [Witness; WIDTH] = [zero; WIDTH];
+        i.iter().zip(i_var.iter_mut()).for_each(|(i, v)| {
+            *v = composer.append_witness(*i);
+        });
+
+        let mut o_var: [Witness; WIDTH] = [zero; WIDTH];
+        o.iter().zip(o_var.iter_mut()).for_each(|(o, v)| {
+            *v = composer.append_witness(*o);
+        });
+
+        // Apply Hades gadget strategy.
+        GadgetStrategy::gadget(composer, &mut i_var);
+
+        // Copy the result of the permutation into the perm.
+        perm.copy_from_slice(&i_var);
+
+        // Check that the Gadget perm results = BlsScalar perm results
+        i_var.iter().zip(o_var.iter()).for_each(|(p, o)| {
+            composer.assert_equal(*p, *o);
+        });
+    }
+
+    /// Setup the ZK parameters
+    fn setup() -> Result<(&'static [u8], Verifier, CommitKey, OpeningKey), Error> {
+        const CAPACITY: usize = 1 << 10;
+
+        let pp = PublicParameters::setup(CAPACITY, &mut rand::thread_rng())?;
+        let label = b"hades_gadget_tester";
+        let (ck, ok) = pp.trim(CAPACITY)?;
+
+        let (i, o) = hades();
+
+        let mut prover = Prover::new(label);
+        hades_gadget_tester(i, o, prover.composer_mut());
+
+        let mut verifier = Verifier::new(label);
+
+        hades_gadget_tester(i, o, verifier.composer_mut());
+        verifier.preprocess(&ck)?;
+
+        Ok((label, verifier, ck, ok))
     }
 
     #[test]
-    fn hades_preimage() -> Result<(), Error> {
-        const CAPACITY: usize = 2048;
-
-        fn hades() -> ([BlsScalar; WIDTH], [BlsScalar; WIDTH]) {
-            let mut input = [BlsScalar::zero(); WIDTH];
-            input
-                .iter_mut()
-                .for_each(|s| *s = BlsScalar::random(&mut OsRng));
-            let mut output = [BlsScalar::zero(); WIDTH];
-            output.copy_from_slice(&input);
-            ScalarStrategy::new().perm(&mut output);
-            (input, output)
-        }
-
-        fn hades_gadget_tester(
-            i: [BlsScalar; WIDTH],
-            o: [BlsScalar; WIDTH],
-            composer: &mut StandardComposer,
-        ) -> Vec<BlsScalar> {
-            let mut perm: [Variable; WIDTH] = [unsafe { mem::zeroed() }; WIDTH];
-
-            let zero = composer.add_input(BlsScalar::zero());
-
-            let mut i_var: [Variable; WIDTH] = [zero; WIDTH];
-            i.iter().zip(i_var.iter_mut()).for_each(|(i, v)| {
-                *v = composer.add_input(*i);
-            });
-
-            let mut o_var: [Variable; WIDTH] = [zero; WIDTH];
-            o.iter().zip(o_var.iter_mut()).for_each(|(o, v)| {
-                *v = composer.add_input(*o);
-            });
-
-            // Apply Hades gadget strategy.
-            GadgetStrategy::hades_gadget(composer, &mut i_var);
-
-            // Copy the result of the permutation into the perm.
-            perm.copy_from_slice(&i_var);
-
-            // Check that the Gadget perm results = BlsScalar perm results
-            i_var.iter().zip(o_var.iter()).for_each(|(p, o)| {
-                composer.add_gate(
-                    *p,
-                    *o,
-                    zero,
-                    -BlsScalar::one(),
-                    BlsScalar::one(),
-                    BlsScalar::zero(),
-                    BlsScalar::zero(),
-                    None,
-                );
-            });
-
-            composer.add_dummy_constraints();
-            alloc::vec![BlsScalar::zero()]
-        }
-
-        // Setup OG params.
-        let public_parameters = PublicParameters::setup(CAPACITY, &mut OsRng)?;
-        let (ck, vk) = public_parameters.trim(CAPACITY)?;
+    fn preimage() -> Result<(), Error> {
+        let (label, verifier, ck, ok) = setup()?;
 
         let (i, o) = hades();
+
         // Proving
-        let mut prover = Prover::new(b"hades_gadget_tester");
-        let pi = hades_gadget_tester(i, o, prover.mut_cs());
-        prover.preprocess(&ck)?;
+        let mut prover = Prover::new(label);
+        hades_gadget_tester(i, o, prover.composer_mut());
         let proof = prover.prove(&ck)?;
 
         // Verifying
-        let mut verifier = Verifier::new(b"hades_gadget_tester");
-        let _ = hades_gadget_tester(i, o, verifier.mut_cs());
-        verifier.preprocess(&ck)?;
-        assert!(verifier.verify(&proof, &vk, &pi).is_ok());
-        //------------------------------------------//
-        //                                          //
-        //  Second Proof test with different values //
-        //                                          //
-        //------------------------------------------//
+        verifier.verify(&proof, &ok, &[])?;
 
-        // Prepare input & output of the permutation for second Proof test
-        prover.clear_witness();
+        Ok(())
+    }
+
+    #[test]
+    fn preimage_constant() -> Result<(), Error> {
+        let (label, verifier, ck, ok) = setup()?;
+
+        // Prepare input & output
         let e = [BlsScalar::from(5000u64); WIDTH];
         let mut e_perm = [BlsScalar::from(5000u64); WIDTH];
-        perm(&mut e_perm);
+        ScalarStrategy::new().perm(&mut e_perm);
 
-        // Prove 2 with different values
-        let pi2 = hades_gadget_tester(e, e_perm, prover.mut_cs());
-        let proof2 = prover.prove(&ck)?;
+        // Proving
+        let mut prover = Prover::new(label);
+        hades_gadget_tester(e, e_perm, prover.composer_mut());
+        let proof = prover.prove(&ck)?;
 
-        // Verify 2 with different values
         // Verifying
-        let _ = hades_gadget_tester(i, o, verifier.mut_cs());
-        assert!(verifier.verify(&proof2, &vk, &pi2).is_ok());
+        verifier.verify(&proof, &ok, &[])?;
 
-        //------------------------------------------//
-        //                                          //
-        //  Third Proof test with wrong values      //
-        //                                          //
-        //------------------------------------------//
+        Ok(())
+    }
+
+    #[test]
+    fn preimage_fails() -> Result<(), Error> {
+        let (label, verifier, ck, ok) = setup()?;
 
         // Generate [31, 0, 0, 0, 0] as real input to the perm but build the
         // proof with [31, 31, 31, 31, 31]. This should fail on verification
         // since the Proof contains incorrect statements.
         let x_scalar = BlsScalar::from(31u64);
+
         let mut x = [BlsScalar::zero(); WIDTH];
         x[1] = x_scalar;
+
         let mut h = [BlsScalar::from(31u64); WIDTH];
-        perm(&mut h);
+        ScalarStrategy::new().perm(&mut h);
 
         // Prove 3 with wrong inputs
-        prover.clear_witness();
-        let pi3 = hades_gadget_tester(x, h, prover.mut_cs());
-        let proof3 = prover.prove(&ck)?;
+        let mut prover = Prover::new(label);
+        hades_gadget_tester(x, h, prover.composer_mut());
+        let proof = prover.prove(&ck)?;
 
-        // Verify 3 with wrong inputs should fail
-        let _ = hades_gadget_tester(i, o, verifier.mut_cs());
-        assert!(verifier.verify(&proof3, &vk, &pi3).is_err());
+        // Verification fails
+        assert!(verifier.verify(&proof, &ok, &[]).is_err());
 
         Ok(())
     }
