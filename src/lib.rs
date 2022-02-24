@@ -8,14 +8,11 @@
 #![no_std]
 #![doc = include_str!("../README.md")]
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
-
 mod mds_matrix;
 mod round_constants;
 
 /// Strategies implemented for the Hades252 algorithm.
-pub mod strategies;
+mod strategies;
 
 /// Total ammount of full rounds that will be applied.
 /// This is expressed as `RF` in the paper.
@@ -28,7 +25,7 @@ pub const PARTIAL_ROUNDS: usize = 59;
 /// Maximum input width for the rounds
 pub const WIDTH: usize = 5;
 
-#[cfg(feature = "alloc")]
+#[cfg(feature = "plonk")]
 pub use strategies::GadgetStrategy;
 pub use strategies::{ScalarStrategy, Strategy};
 
