@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Update `dusk-bls12_381` from `0.8` to `0.9`
-- Update `dusk-plonk` from `0.9` to `0.10`
+- Update `dusk-bls12_381` from `0.8` to `0.10`
+- Update `dusk-plonk` from `0.9` to `0.12`
 
 ## [0.16.0] - 2021-07-02
 
