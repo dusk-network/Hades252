@@ -1,6 +1,6 @@
 [package]
 name = "dusk-hades"
-version = "0.19.0-rc.0"
+version = "0.19.0-rc.1"
 authors = [
   "kev <kevtheappdev@gmail.com>", "zer0 <matteo@dusk.network>",
   "Victor Lopes <victor@dusk.network>", "kr0 <c.perezbaro@gmail.com>"
