@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2022-08-17
+
 ### Changed
 
 - Update `dusk-bls12_381` from `0.8` to `0.11`
@@ -197,7 +199,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#86]: https://github.com/dusk-network/Hades252/issues/86
 [#85]: (https://github.com/dusk-network/Hades252/issues/85)
 [#84]: https://github.com/dusk-network/Hades252/issues/84
-[unreleased]: https://github.com/dusk-network/dusk-abi/compare/v0.18.0-rc.0...HEAD
+[unreleased]: https://github.com/dusk-network/dusk-abi/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/dusk-network/dusk-abi/compare/v0.16.0...v0.19.0
 [0.16.0]: https://github.com/dusk-network/dusk-abi/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/dusk-network/dusk-abi/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/dusk-network/dusk-abi/compare/v0.13.0...v0.14.0
