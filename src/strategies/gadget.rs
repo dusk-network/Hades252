@@ -12,33 +12,39 @@ use dusk_plonk::prelude::*;
 
 /// Implements a Hades252 strategy for `Witness` as input values.
 /// Requires a reference to a `ConstraintSystem`.
-pub struct GadgetStrategy<'a> {
+pub struct GadgetStrategy<'a, C> {
     /// A reference to the constraint system used by the gadgets
-    cs: &'a mut TurboComposer,
+    cs: &'a mut C,
     count: usize,
 }
 
-impl<'a> GadgetStrategy<'a> {
+impl<'a, C> GadgetStrategy<'a, C>
+where
+    C: Composer,
+{
     /// Constructs a new `GadgetStrategy` with the constraint system.
-    pub fn new(cs: &'a mut TurboComposer) -> Self {
+    pub fn new(cs: &'a mut C) -> Self {
         GadgetStrategy { cs, count: 0 }
     }
 
     /// Perform the hades permutation on a plonk circuit
-    pub fn gadget(composer: &'a mut TurboComposer, x: &mut [Witness]) {
+    pub fn gadget(composer: &'a mut C, x: &mut [Witness]) {
         let mut strategy = GadgetStrategy::new(composer);
 
         strategy.perm(x);
     }
 }
 
-impl AsMut<TurboComposer> for GadgetStrategy<'_> {
-    fn as_mut(&mut self) -> &mut TurboComposer {
+impl<C> AsMut<C> for GadgetStrategy<'_, C> {
+    fn as_mut(&mut self) -> &mut C {
         self.cs
     }
 }
 
-impl<'a> Strategy<Witness> for GadgetStrategy<'a> {
+impl<'a, C> Strategy<Witness> for GadgetStrategy<'a, C>
+where
+    C: Composer,
+{
     fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [Witness])
     where
         I: Iterator<Item = &'b BlsScalar>,
@@ -73,9 +79,7 @@ impl<'a> Strategy<Witness> for GadgetStrategy<'a> {
     where
         I: Iterator<Item = &'b BlsScalar>,
     {
-        let zero = TurboComposer::constant_zero();
-
-        let mut result = [zero; WIDTH];
+        let mut result = [C::ZERO; WIDTH];
         self.count += 1;
 
         // Implementation optimized for WIDTH = 5
@@ -141,6 +145,48 @@ mod tests {
     use crate::{GadgetStrategy, ScalarStrategy, Strategy, WIDTH};
     use core::result::Result;
     use dusk_plonk::prelude::*;
+    use rand::rngs::StdRng;
+    use rand::SeedableRng;
+
+    #[derive(Default)]
+    struct TestCircuit {
+        i: [BlsScalar; WIDTH],
+        o: [BlsScalar; WIDTH],
+    }
+
+    impl Circuit for TestCircuit {
+        fn circuit<C>(&self, composer: &mut C) -> Result<(), Error>
+        where
+            C: Composer,
+        {
+            let zero = C::ZERO;
+
+            let mut perm: [Witness; WIDTH] = [zero; WIDTH];
+
+            let mut i_var: [Witness; WIDTH] = [zero; WIDTH];
+            self.i.iter().zip(i_var.iter_mut()).for_each(|(i, v)| {
+                *v = composer.append_witness(*i);
+            });
+
+            let mut o_var: [Witness; WIDTH] = [zero; WIDTH];
+            self.o.iter().zip(o_var.iter_mut()).for_each(|(o, v)| {
+                *v = composer.append_witness(*o);
+            });
+
+            // Apply Hades gadget strategy.
+            GadgetStrategy::gadget(composer, &mut i_var);
+
+            // Copy the result of the permutation into the perm.
+            perm.copy_from_slice(&i_var);
+
+            // Check that the Gadget perm results = BlsScalar perm results
+            i_var.iter().zip(o_var.iter()).for_each(|(p, o)| {
+                composer.assert_equal(*p, *o);
+            });
+
+            Ok(())
+        }
+    }
 
     /// Generate a random input and perform a permutation
     fn hades() -> ([BlsScalar; WIDTH], [BlsScalar; WIDTH]) {
@@ -158,118 +204,78 @@ mod tests {
         (input, output)
     }
 
-    /// Permutate `i` in a circuit and assert the result equals `o`
-    fn hades_gadget_tester(
-        i: [BlsScalar; WIDTH],
-        o: [BlsScalar; WIDTH],
-        composer: &mut TurboComposer,
-    ) {
-        let zero = TurboComposer::constant_zero();
-
-        let mut perm: [Witness; WIDTH] = [zero; WIDTH];
-
-        let mut i_var: [Witness; WIDTH] = [zero; WIDTH];
-        i.iter().zip(i_var.iter_mut()).for_each(|(i, v)| {
-            *v = composer.append_witness(*i);
-        });
-
-        let mut o_var: [Witness; WIDTH] = [zero; WIDTH];
-        o.iter().zip(o_var.iter_mut()).for_each(|(o, v)| {
-            *v = composer.append_witness(*o);
-        });
-
-        // Apply Hades gadget strategy.
-        GadgetStrategy::gadget(composer, &mut i_var);
-
-        // Copy the result of the permutation into the perm.
-        perm.copy_from_slice(&i_var);
-
-        // Check that the Gadget perm results = BlsScalar perm results
-        i_var.iter().zip(o_var.iter()).for_each(|(p, o)| {
-            composer.assert_equal(*p, *o);
-        });
-    }
-
-    /// Setup the ZK parameters
-    fn setup() -> Result<(&'static [u8], Verifier, CommitKey, OpeningKey), Error> {
+    /// Setup the test circuit prover and verifier
+    fn setup() -> Result<(Prover<TestCircuit>, Verifier<TestCircuit>), Error> {
         const CAPACITY: usize = 1 << 10;
 
         let pp = PublicParameters::setup(CAPACITY, &mut rand::thread_rng())?;
         let label = b"hades_gadget_tester";
-        let (ck, ok) = pp.trim(CAPACITY)?;
 
-        let (i, o) = hades();
-
-        let mut prover = Prover::new(label);
-        hades_gadget_tester(i, o, prover.composer_mut());
-
-        let mut verifier = Verifier::new(label);
-
-        hades_gadget_tester(i, o, verifier.composer_mut());
-        verifier.preprocess(&ck)?;
-
-        Ok((label, verifier, ck, ok))
+        Compiler::compile::<TestCircuit>(&pp, label)
     }
 
     #[test]
     fn preimage() -> Result<(), Error> {
-        let (label, verifier, ck, ok) = setup()?;
+        let (prover, verifier) = setup()?;
 
         let (i, o) = hades();
 
+        let circuit = TestCircuit { i, o };
+        let mut rng = StdRng::seed_from_u64(0xbeef);
+
         // Proving
-        let mut prover = Prover::new(label);
-        hades_gadget_tester(i, o, prover.composer_mut());
-        let proof = prover.prove(&ck)?;
+        let (proof, public_inputs) = prover.prove(&mut rng, &circuit)?;
 
         // Verifying
-        verifier.verify(&proof, &ok, &[])?;
+        verifier.verify(&proof, &public_inputs)?;
 
         Ok(())
     }
 
     #[test]
     fn preimage_constant() -> Result<(), Error> {
-        let (label, verifier, ck, ok) = setup()?;
+        let (prover, verifier) = setup()?;
 
         // Prepare input & output
-        let e = [BlsScalar::from(5000u64); WIDTH];
-        let mut e_perm = [BlsScalar::from(5000u64); WIDTH];
-        ScalarStrategy::new().perm(&mut e_perm);
+        let i = [BlsScalar::from(5000u64); WIDTH];
+        let mut o = [BlsScalar::from(5000u64); WIDTH];
+        ScalarStrategy::new().perm(&mut o);
+
+        let circuit = TestCircuit { i, o };
+        let mut rng = StdRng::seed_from_u64(0xbeef);
 
         // Proving
-        let mut prover = Prover::new(label);
-        hades_gadget_tester(e, e_perm, prover.composer_mut());
-        let proof = prover.prove(&ck)?;
+        let (proof, public_inputs) = prover.prove(&mut rng, &circuit)?;
 
         // Verifying
-        verifier.verify(&proof, &ok, &[])?;
+        verifier.verify(&proof, &public_inputs)?;
 
         Ok(())
     }
 
     #[test]
     fn preimage_fails() -> Result<(), Error> {
-        let (label, verifier, ck, ok) = setup()?;
+        let (prover, _) = setup()?;
 
         // Generate [31, 0, 0, 0, 0] as real input to the perm but build the
         // proof with [31, 31, 31, 31, 31]. This should fail on verification
         // since the Proof contains incorrect statements.
         let x_scalar = BlsScalar::from(31u64);
 
-        let mut x = [BlsScalar::zero(); WIDTH];
-        x[1] = x_scalar;
+        let mut i = [BlsScalar::zero(); WIDTH];
+        i[1] = x_scalar;
 
-        let mut h = [BlsScalar::from(31u64); WIDTH];
-        ScalarStrategy::new().perm(&mut h);
+        let mut o = [BlsScalar::from(31u64); WIDTH];
+        ScalarStrategy::new().perm(&mut o);
 
-        // Prove 3 with wrong inputs
-        let mut prover = Prover::new(label);
-        hades_gadget_tester(x, h, prover.composer_mut());
-        let proof = prover.prove(&ck)?;
+        let circuit = TestCircuit { i, o };
+        let mut rng = StdRng::seed_from_u64(0xbeef);
 
-        // Verification fails
-        assert!(verifier.verify(&proof, &ok, &[]).is_err());
+        // Proving should fail
+        assert!(
+            prover.prove(&mut rng, &circuit).is_err(),
+            "proving should fail since the circuit is invalid"
+        );
 
         Ok(())
     }
