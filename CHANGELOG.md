@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2023-06-28
+
 ### Changed
 
 - Update `dusk-plonk` from `0.13` to `0.14`
@@ -202,6 +204,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use `curve25519-dalek` as curve-backend.
 - Use `bulletproofs` as proving system.
 
+<!-- ISSUES -->
 [#99]: https://github.com/dusk-network/Hades252/issues/99
 [#98]: https://github.com/dusk-network/Hades252/issues/98
 [#96]: https://github.com/dusk-network/Hades252/issues/96
@@ -209,7 +212,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#86]: https://github.com/dusk-network/Hades252/issues/86
 [#85]: (https://github.com/dusk-network/Hades252/issues/85)
 [#84]: https://github.com/dusk-network/Hades252/issues/84
-[unreleased]: https://github.com/dusk-network/dusk-abi/compare/v0.20.0...HEAD
+
+<!-- VERSIONS -->
+[unreleased]: https://github.com/dusk-network/dusk-abi/compare/v0.21.0...HEAD
+[0.21.0]: https://github.com/dusk-network/dusk-abi/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/dusk-network/dusk-abi/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/dusk-network/dusk-abi/compare/v0.16.0...v0.19.0
 [0.16.0]: https://github.com/dusk-network/dusk-abi/compare/v0.15.0...v0.16.0
