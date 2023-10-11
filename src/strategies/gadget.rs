@@ -145,6 +145,7 @@ mod tests {
     use crate::{GadgetStrategy, ScalarStrategy, Strategy, WIDTH};
     use core::result::Result;
     use dusk_plonk::prelude::*;
+    use ff::Field;
     use rand::rngs::StdRng;
     use rand::SeedableRng;
 
@@ -205,7 +206,7 @@ mod tests {
     }
 
     /// Setup the test circuit prover and verifier
-    fn setup() -> Result<(Prover<TestCircuit>, Verifier<TestCircuit>), Error> {
+    fn setup() -> Result<(Prover, Verifier), Error> {
         const CAPACITY: usize = 1 << 10;
 
         let pp = PublicParameters::setup(CAPACITY, &mut rand::thread_rng())?;
