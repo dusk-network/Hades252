@@ -24,10 +24,10 @@ pub const MDS_MATRIX: [[BlsScalar; WIDTH]; WIDTH] = {
     while i < WIDTH {
         let mut j = 0;
         while j < WIDTH {
-            let a = u64_from_buffer(&bytes, k);
-            let b = u64_from_buffer(&bytes, k + 8);
-            let c = u64_from_buffer(&bytes, k + 16);
-            let d = u64_from_buffer(&bytes, k + 24);
+            let a = u64_from_buffer(bytes, k);
+            let b = u64_from_buffer(bytes, k + 8);
+            let c = u64_from_buffer(bytes, k + 16);
+            let d = u64_from_buffer(bytes, k + 24);
             k += 32;
 
             mds[i][j] = BlsScalar::from_raw([a, b, c, d]);
