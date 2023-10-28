@@ -106,13 +106,11 @@ where
         // w_4 = r[x]
         // r[x] = q_l · w_l + q_r · w_r + q_4 · w_4 + c;
         for j in 0..WIDTH {
-            let c;
-
-            if self.count < Self::rounds() {
-                c = Self::next_c(constants);
+            let c = if self.count < Self::rounds() {
+                Self::next_c(constants)
             } else {
-                c = BlsScalar::zero();
-            }
+                BlsScalar::zero()
+            };
 
             let constraint = Constraint::new()
                 .left(MDS_MATRIX[j][0])
