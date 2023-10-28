@@ -39,9 +39,9 @@ impl Strategy<BlsScalar> for ScalarStrategy {
     {
         let mut result = [BlsScalar::zero(); WIDTH];
 
-        for j in 0..WIDTH {
+        for (j, value) in values.iter().enumerate().take(WIDTH) {
             for k in 0..WIDTH {
-                result[k] += MDS_MATRIX[k][j] * values[j];
+                result[k] += MDS_MATRIX[k][j] * value;
             }
         }
 
