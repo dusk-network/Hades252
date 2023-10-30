@@ -33,10 +33,10 @@ pub const ROUND_CONSTANTS: [BlsScalar; CONSTANTS] = {
     let mut i = 0;
     let mut j = 0;
     while i < bytes.len() {
-        let a = u64_from_buffer(&bytes, i);
-        let b = u64_from_buffer(&bytes, i + 8);
-        let c = u64_from_buffer(&bytes, i + 16);
-        let d = u64_from_buffer(&bytes, i + 24);
+        let a = u64_from_buffer(bytes, i);
+        let b = u64_from_buffer(bytes, i + 8);
+        let c = u64_from_buffer(bytes, i + 16);
+        let d = u64_from_buffer(bytes, i + 24);
 
         cnst[j] = BlsScalar::from_raw([a, b, c, d]);
         j += 1;
