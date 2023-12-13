@@ -17,10 +17,10 @@ make doc-internal
 
 ## Use
 
-To import `Hades252`, add the following to the dependencies section of your project's `Cargo.toml`:
+Run the following to add `Hades252` to the dependency section of your project's 'Cargo.toml':
 
 ```toml
-dusk-hades = "0.16.0"
+cargo add dusk-hades
 ```
 
 `Hades252` has a `width` equals to `5`; it's possible to use a different value,
@@ -58,41 +58,6 @@ strategy.perm(output.as_mut_slice());
 
 assert_ne!(&input, &output);
 assert_eq!(input.len(), output.len());
-```
-
-## Example for `GadgetStrategy`
-
-```rust,ignore
-// Proving that we know the pre-image of a hades-252 hash.
-use dusk_hades::{GadgetStrategy, Strategy, WIDTH};
-use dusk_plonk::prelude::*;
-
-// Setup OG params.
-const CAPACITY: usize = 1 << 10;
-
-let public_parameters = PublicParameters::setup(CAPACITY, &mut rand::thread_rng()).unwrap();
-let (ck, vk) = public_parameters.trim(CAPACITY).unwrap();;
-
-// Gen inputs
-let mut inputs = [BlsScalar::one(); WIDTH];
-
-let mut prover = Prover::new(b"Hades_Testing");
-
-// Generate the witness data
-let mut composer = prover.composer_mut();
-let zero = TurboComposer::constant_zero();
-
-let mut witness = [zero; WIDTH];
-witness.iter_mut()
-    .zip(inputs.iter())
-    .for_each(|(w, i)| *w = composer.append_witness(*i));
-
-// Perform the permutation in the circuit
-GadgetStrategy::gadget(prover.composer_mut(), &mut witness);
-
-// Now your composer has been filled with a hades permutation
-// inside.
-// Now you can build your proof or keep extending your circuit.
 ```
 
 ## Deviations
