@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.0] - 2023-12-13
+
 ## Changed
 
 - Update `dusk-plonk` to 0.18
@@ -232,7 +234,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#84]: https://github.com/dusk-network/Hades252/issues/84
 
 <!-- VERSIONS -->
-[unreleased]: https://github.com/dusk-network/dusk-abi/compare/v0.22.1...HEAD
+[unreleased]: https://github.com/dusk-network/dusk-abi/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/dusk-network/dusk-abi/compare/v0.22.1...v0.23.0
 [0.22.1]: https://github.com/dusk-network/dusk-abi/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/dusk-network/dusk-abi/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/dusk-network/dusk-abi/compare/v0.20.0...v0.21.0

@@ -1,6 +1,6 @@
 [package]
 name = "dusk-hades"
-version = "0.22.0"
+version = "0.23.0"
 edition = "2021"
 description ="Implementation of Hades252 permutation algorithm over the Bls12-381 Scalar field."
 categories = ["algorithms", "cryptography", "no-std", "wasm"]
