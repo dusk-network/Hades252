@@ -1,4 +1,4 @@
-# Changelog
+# CHANGELOG
 
 All notable changes to this project will be documented in this file.
 
@@ -7,13 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## Changed
+## [0.24.0] - 2024-01-03
+
+### Changed
 
 - Update `dusk-plonk` to 0.19
 
 ## [0.23.0] - 2023-12-13
 
-## Changed
+### Changed
 
 - Update `dusk-plonk` to 0.18
 - Update `dusk-bls12_381` to 0.13
@@ -221,7 +223,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.0] - 2020-02-27
 
-### Addeded
+### Added
 
 - Basic Hades252 implementation.
 - Strategy structure.
@@ -238,7 +240,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#84]: https://github.com/dusk-network/Hades252/issues/84
 
 <!-- VERSIONS -->
-[unreleased]: https://github.com/dusk-network/dusk-abi/compare/v0.23.0...HEAD
+[unreleased]: https://github.com/dusk-network/dusk-abi/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/dusk-network/dusk-abi/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/dusk-network/dusk-abi/compare/v0.22.1...v0.23.0
 [0.22.1]: https://github.com/dusk-network/dusk-abi/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/dusk-network/dusk-abi/compare/v0.21.0...v0.22.0
