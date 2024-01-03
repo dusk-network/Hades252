@@ -12,39 +12,33 @@ use dusk_plonk::prelude::*;
 
 /// Implements a Hades252 strategy for `Witness` as input values.
 /// Requires a reference to a `ConstraintSystem`.
-pub struct GadgetStrategy<'a, C> {
+pub struct GadgetStrategy<'a> {
     /// A reference to the constraint system used by the gadgets
-    cs: &'a mut C,
+    cs: &'a mut Composer,
     count: usize,
 }
 
-impl<'a, C> GadgetStrategy<'a, C>
-where
-    C: Composer,
-{
+impl<'a> GadgetStrategy<'a> {
     /// Constructs a new `GadgetStrategy` with the constraint system.
-    pub fn new(cs: &'a mut C) -> Self {
+    pub fn new(cs: &'a mut Composer) -> Self {
         GadgetStrategy { cs, count: 0 }
     }
 
     /// Perform the hades permutation on a plonk circuit
-    pub fn gadget(composer: &'a mut C, x: &mut [Witness]) {
+    pub fn gadget(composer: &'a mut Composer, x: &mut [Witness]) {
         let mut strategy = GadgetStrategy::new(composer);
 
         strategy.perm(x);
     }
 }
 
-impl<C> AsMut<C> for GadgetStrategy<'_, C> {
-    fn as_mut(&mut self) -> &mut C {
+impl AsMut<Composer> for GadgetStrategy<'_> {
+    fn as_mut(&mut self) -> &mut Composer {
         self.cs
     }
 }
 
-impl<'a, C> Strategy<Witness> for GadgetStrategy<'a, C>
-where
-    C: Composer,
-{
+impl<'a> Strategy<Witness> for GadgetStrategy<'a> {
     fn add_round_key<'b, I>(&mut self, constants: &mut I, words: &mut [Witness])
     where
         I: Iterator<Item = &'b BlsScalar>,
@@ -79,7 +73,7 @@ where
     where
         I: Iterator<Item = &'b BlsScalar>,
     {
-        let mut result = [C::ZERO; WIDTH];
+        let mut result = [Composer::ZERO; WIDTH];
         self.count += 1;
 
         // Implementation optimized for WIDTH = 5
@@ -154,11 +148,8 @@ mod tests {
     }
 
     impl Circuit for TestCircuit {
-        fn circuit<C>(&self, composer: &mut C) -> Result<(), Error>
-        where
-            C: Composer,
-        {
-            let zero = C::ZERO;
+        fn circuit(&self, composer: &mut Composer) -> Result<(), Error> {
+            let zero = Composer::ZERO;
 
             let mut perm: [Witness; WIDTH] = [zero; WIDTH];
 
