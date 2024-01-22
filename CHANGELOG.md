@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Add deprecation notice [#120]
+
 ## [0.24.0] - 2024-01-03
 
 ### Changed
@@ -231,6 +235,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use `bulletproofs` as proving system.
 
 <!-- ISSUES -->
+[#120]: https://github.com/dusk-network/Hades252/issues/120
 [#99]: https://github.com/dusk-network/Hades252/issues/99
 [#98]: https://github.com/dusk-network/Hades252/issues/98
 [#96]: https://github.com/dusk-network/Hades252/issues/96

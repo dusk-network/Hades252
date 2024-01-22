@@ -2,7 +2,9 @@
 [![Repository](https://img.shields.io/badge/github-hades252-blueviolet?logo=github)](https://github.com/dusk-network/hades252)
 [![Documentation](https://img.shields.io/badge/docs-dusk--hades-blue?logo=rust)](https://docs.rs/dusk-hades/)
 
-# Hades252
+# Hades252 (deprecated)
+
+**This crate is not in active development anymore. The functionalities of this crate moved into [`dusk-poseidon`](https://github.com/dusk-network/Poseidon252).**
 
 Implementation of Hades252 permutation algorithm over the Bls12-381 Scalar field.
 
