@@ -7,6 +7,7 @@
 #![deny(missing_docs)]
 #![no_std]
 #![doc = include_str!("../README.md")]
+#![deprecated = "This crate is deprecated. The code was moved to dusk-poseidon."]
 
 mod mds_matrix;
 mod round_constants;
