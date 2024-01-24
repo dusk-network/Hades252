@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.1] - 2024-01-24
+
 ### Changed
 
 - Add deprecation notice [#120]
@@ -245,7 +247,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#84]: https://github.com/dusk-network/Hades252/issues/84
 
 <!-- VERSIONS -->
-[unreleased]: https://github.com/dusk-network/dusk-abi/compare/v0.24.0...HEAD
+[unreleased]: https://github.com/dusk-network/dusk-abi/compare/v0.24.1...HEAD
+[0.24.1]: https://github.com/dusk-network/dusk-abi/compare/v0.24.0...v0.24.1
 [0.24.0]: https://github.com/dusk-network/dusk-abi/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/dusk-network/dusk-abi/compare/v0.22.1...v0.23.0
 [0.22.1]: https://github.com/dusk-network/dusk-abi/compare/v0.22.0...v0.22.1
