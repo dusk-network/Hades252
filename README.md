@@ -4,7 +4,9 @@
 
 # Hades252 (deprecated)
 
-**This crate is not in active development anymore. The functionalities of this crate moved into [`dusk-poseidon`](https://github.com/dusk-network/Poseidon252).**
+| :exclamation: This crate is deprecated. |
+|---------------------------------------------|
+The hades permutation moved into [`dusk-poseidon`](https://github.com/dusk-network/Poseidon252).
 
 Implementation of Hades252 permutation algorithm over the Bls12-381 Scalar field.
 
